@@ -1,6 +1,6 @@
 use graph::Graph;
 use ops::exposure::Exposure;
-use image::LinearImage;
+use image::linear_image::LinearImage;
 
 fn main() {
     let img = LinearImage::new(100, 100);

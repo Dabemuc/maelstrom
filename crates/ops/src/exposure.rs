@@ -1,5 +1,5 @@
 use graph::{Node, Backend};
-use image::LinearImage;
+use image::linear_image::LinearImage;
 
 pub struct Exposure {
     pub ev: f32,
