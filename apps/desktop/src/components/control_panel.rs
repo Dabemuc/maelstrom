@@ -62,7 +62,14 @@ fn icon_button<'a>(
             }
         });
 
-    let btn = button(tooltip(icon, label, Position::Top));
+    let btn = button(tooltip(icon, label, Position::Top)).padding(6);
 
-    btn.style(button::text)
+    btn.style(|theme: &iced::Theme, status: button::Status| {
+        let mut style = button::text(theme, status);
+        if status == button::Status::Hovered {
+            style.background = Some(iced::Color::from_rgba(0.0, 0.0, 0.0, 0.2).into());
+            style.border.radius = 4.0.into();
+        }
+        style
+    })
 }
