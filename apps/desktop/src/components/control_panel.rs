@@ -6,13 +6,13 @@ use iced::{Alignment, Element, Length};
 pub fn control_panel(state: &App) -> Element<'_, Message> {
     let left_controls = row![
         icon_button(
-            "assets/icons/folder.svg",
+            svg::Handle::from_memory(include_bytes!("../../assets/icons/folder.svg")),
             "File Navigator",
             state.left_sidebar_visible && state.left_sidebar_mode == LeftSidebarMode::FileNavigator
         )
         .on_press(Message::LeftSidebarClicked(LeftSidebarMode::FileNavigator)),
         icon_button(
-            "assets/icons/layers.svg",
+            svg::Handle::from_memory(include_bytes!("../../assets/icons/layers.svg")),
             "Collections",
             state.left_sidebar_visible && state.left_sidebar_mode == LeftSidebarMode::Collections
         )
@@ -22,7 +22,7 @@ pub fn control_panel(state: &App) -> Element<'_, Message> {
 
     let right_controls = row![
         icon_button(
-            "assets/icons/edit.svg",
+            svg::Handle::from_memory(include_bytes!("../../assets/icons/edit.svg")),
             "Edit",
             state.right_sidebar_visible && state.right_sidebar_mode == RightSidebarMode::Edit
         )
@@ -44,12 +44,10 @@ pub fn control_panel(state: &App) -> Element<'_, Message> {
 }
 
 fn icon_button<'a>(
-    svg_path: &'a str,
+    handle: svg::Handle,
     label: &'a str,
     is_active: bool,
 ) -> iced::widget::Button<'a, Message> {
-    let handle = svg::Handle::from_path(svg_path);
-
     let icon = svg(handle)
         .width(Length::Fixed(24.0))
         .height(Length::Fixed(24.0));
