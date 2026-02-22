@@ -1,10 +1,13 @@
 # Next steps
-- [ ] Catalog -> sqlite file that contains:
-  - [ ] info about imported directories
-  - [ ] Nodegraph of developed files
-  - [ ] previews
-  - [ ] settings
-- [ ] Navigator shows all imported directories and lets user set Working directory by clicking
+- [ ] Catalog 
+  - [ ] Turso sqlite file that contains:
+    - [ ] info about imported directories
+    - [ ] metadate of imported files
+      - [ ] Nodegraph (if exists)
+      - [ ] preview file location
+    - [ ] settings
+  - [ ] Maelstrom needs an active catalog -> On startup if no catalog found in default location make the user create one or import existing one to default location before 'allowing access' to the app. For now default location should just be here inside this repo.
+- [ ] Navigator shows all imported directories from catalog and lets user set Working directory by clicking
 - [ ] Working directory
 - [ ] Library view
   - [ ] Show only fotos from current working directory in library view
