@@ -1,7 +1,17 @@
 # Next steps
-- [ ] Proper color management
-- [ ] 
-- [ ] 
+- [ ] Catalog -> sqlite file that contains:
+  - [ ] info about imported directories
+  - [ ] Nodegraph of developed files
+  - [ ] previews
+  - [ ] settings
+- [ ] Navigator shows all imported directories and lets user set Working directory by clicking
+- [ ] Working directory
+- [ ] Library view
+  - [ ] Show only fotos from current working directory in library view
+  - [ ] User can switch to Develop view by double clicking foto
+- [ ] Develop view
+  - [ ] Interactions modify node graph -> Rerendering of developed foto and its preview
+  - [ ] ...
 
 
 # For the future
