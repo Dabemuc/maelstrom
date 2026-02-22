@@ -3,7 +3,7 @@ use iced::widget::tooltip::Position;
 use iced::widget::{Space, button, container, row, svg, tooltip};
 use iced::{Alignment, Element, Length};
 
-pub fn control_panel(state: &App) -> Element<'_, Message> {
+pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
     let left_controls = row![
         icon_button(
             svg::Handle::from_memory(include_bytes!("../../assets/icons/folder.svg")),

@@ -3,7 +3,8 @@ use iced::{Element, Length};
 
 mod components;
 use components::center_stage::center_stage;
-use components::control_panel::control_panel;
+use components::control_panel_bottom::control_panel_bottom;
+use components::control_panel_top::control_panel_top;
 use components::sidebar_left::sidebar_left;
 use components::sidebar_right::sidebar_right;
 
@@ -82,7 +83,12 @@ impl App {
             main_content = main_content.push(sidebar_right(self));
         }
 
-        column![main_content, control_panel(self),].into()
+        column![
+            control_panel_top(self),
+            main_content,
+            control_panel_bottom(self),
+        ]
+        .into()
     }
 
     fn theme(&self) -> iced::Theme {
@@ -114,8 +120,21 @@ impl App {
 }
 
 fn main() -> iced::Result {
+    // 1. Configure the window to push content into the titlebar
+    let window_settings = iced::window::Settings {
+        platform_specific: iced::window::settings::PlatformSpecific {
+            title_hidden: false,
+            titlebar_transparent: true,
+            fullsize_content_view: true,
+        },
+        ..Default::default()
+    };
+
+
+    // 2. Launch the application
     iced::application(App::default, App::update, App::view)
-        .title("Maelstrom")
         .theme(App::theme)
+        .title("Maelstrom")
+        .window(window_settings)
         .run()
 }
