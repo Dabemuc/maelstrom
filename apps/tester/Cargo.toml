@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-core = { path = "../../crates/core" }
+maelstrom_core = { path = "../../crates/core", package = "core"}
 graph = { path = "../../crates/graph" }
 image = { path = "../../crates/image" }
 io = { path = "../../crates/io" }

@@ -355,7 +355,6 @@ dependencies = [
 name = "graph"
 version = "0.1.0"
 dependencies = [
- "core",
  "image 0.1.0",
 ]
 
@@ -373,9 +372,6 @@ dependencies = [
 [[package]]
 name = "image"
 version = "0.1.0"
-dependencies = [
- "core",
-]
 
 [[package]]
 name = "image"
@@ -432,6 +428,7 @@ dependencies = [
 name = "io"
 version = "0.1.0"
 dependencies = [
+ "core",
  "image 0.1.0",
  "image 0.25.9",
 ]

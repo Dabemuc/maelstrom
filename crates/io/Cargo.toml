@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 maelstrom_image = { path = "../image", package = "image" }
+maelstrom_core = { path = "../core", package = "core"}
 image = "0.25.9"
