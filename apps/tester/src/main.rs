@@ -1,5 +1,5 @@
-use io::png_loaeder::load_png;
-use graph::{Graph, Backend};
+use graph::{Backend, Graph};
+use io::png::{load_png, save_png};
 use ops::exposure::Exposure;
 
 fn main() {
@@ -11,4 +11,5 @@ fn main() {
     let result = graph.execute(img, Backend::Cpu);
 
     println!("Processed image: {}x{}", result.width, result.height);
+    save_png(&result, concat!(env!("CARGO_MANIFEST_DIR"), "/output.png")).unwrap();
 }

@@ -1,1 +1,1 @@
-pub mod srgb_to_linear;
+pub mod linear_srgb;
