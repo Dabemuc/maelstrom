@@ -38,8 +38,16 @@ pub fn control_panel(state: &App) -> Element<'_, Message> {
         ]
         .align_y(Alignment::Center),
     )
-    .padding(10)
+    .padding(5)
     .width(Length::Fill)
+    .style(|theme: &iced::Theme| {
+        let palette = theme.extended_palette();
+        container::Style {
+            background: Some(palette.background.strong.color.into()),
+            text_color: Some(palette.background.strong.text),
+            ..container::Style::default()
+        }
+    })
     .into()
 }
 
@@ -62,7 +70,7 @@ fn icon_button<'a>(
             }
         });
 
-    let btn = button(tooltip(icon, label, Position::Top)).padding(6);
+    let btn = button(tooltip(icon, label, Position::Top)).padding(5);
 
     btn.style(|theme: &iced::Theme, status: button::Status| {
         let mut style = button::text(theme, status);

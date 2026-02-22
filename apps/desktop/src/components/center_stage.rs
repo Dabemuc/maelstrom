@@ -1,9 +1,9 @@
 use crate::{App, Message};
-use iced::{Element, Alignment, Length};
-use iced::widget::{button, column, row, text};
+use iced::widget::{button, column, container, row, text};
+use iced::{Alignment, Element, Length};
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
-    column![
+    let content = column![
         text("Center Stage").size(40),
         row![
             button(if state.left_sidebar_visible {
@@ -23,6 +23,18 @@ pub fn center_stage(state: &App) -> Element<'_, Message> {
     ]
     .width(Length::Fill)
     .align_x(Alignment::Center)
-    .spacing(40)
-    .into()
+    .spacing(40);
+
+    container(content)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(|theme: &iced::Theme| {
+            let palette = theme.extended_palette();
+            container::Style {
+                background: Some(palette.background.base.color.into()),
+                text_color: Some(palette.background.base.text),
+                ..container::Style::default()
+            }
+        })
+        .into()
 }

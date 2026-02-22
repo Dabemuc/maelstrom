@@ -1,5 +1,5 @@
 use iced::widget::{Row, column};
-use iced::{Element, Length, run};
+use iced::{Element, Length};
 
 mod components;
 use components::center_stage::center_stage;
@@ -84,8 +84,38 @@ impl App {
 
         column![main_content, control_panel(self),].into()
     }
+
+    fn theme(&self) -> iced::Theme {
+        // Base dark palette
+        let palette = iced::theme::Palette {
+            background: iced::color!(0x1e1e24), // Slate-ish dark hue
+            text: iced::color!(0xe0e0e0),
+            primary: iced::color!(0x4A90E2),
+            success: iced::color!(0x4CAF50),
+            warning: iced::color!(0xFFC107),
+            danger: iced::color!(0xF44336),
+        };
+
+        iced::Theme::custom_with_fn("Maelstrom Dark", palette, |palette| {
+            // Let iced generate the standard variations for buttons, hover states, etc.
+            let mut extended = iced::theme::palette::Extended::generate(palette);
+
+            // Override the backgrounds to be very close in luminance (Zed style)
+            // Center Stage (Darkest)
+            extended.background.base.color = iced::color!(0x1d1e24);
+            // Sidebars (A tiny bit lighter)
+            extended.background.weak.color = iced::color!(0x23252b);
+            // Control Panel (A tiny bit lighter than sidebars)
+            extended.background.strong.color = iced::color!(0x2a2d34);
+
+            extended
+        })
+    }
 }
 
 fn main() -> iced::Result {
-    run(App::update, App::view)
+    iced::application(App::default, App::update, App::view)
+        .title("Maelstrom")
+        .theme(App::theme)
+        .run()
 }

@@ -1,7 +1,20 @@
 use crate::{App, Message};
-use iced::Element;
-use iced::widget::{column, text};
+use iced::widget::{column, container, text};
+use iced::{Element, Length};
 
 pub fn sidebar_left(_state: &App) -> Element<'_, Message> {
-    column![text("Left Sidebar").size(24),].width(200).into()
+    let content = column![text("Left Sidebar").size(24),].width(200);
+
+    container(content)
+        .width(200)
+        .height(Length::Fill)
+        .style(|theme: &iced::Theme| {
+            let palette = theme.extended_palette();
+            container::Style {
+                background: Some(palette.background.weak.color.into()),
+                text_color: Some(palette.background.weak.text),
+                ..container::Style::default()
+            }
+        })
+        .into()
 }
