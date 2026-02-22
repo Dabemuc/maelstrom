@@ -1,14 +1,43 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use image::LinearImage;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Backend {
+    Cpu,
+    // Gpu (later)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub trait Node: Send + Sync {
+    fn backend(&self) -> Backend;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn process_cpu(&self, input: &image::LinearImage) -> image::LinearImage;
+
+    // fn process_gpu (later)
+}
+
+pub struct Graph {
+    nodes: Vec<Box<dyn Node>>,
+}
+
+impl Graph {
+    pub fn new() -> Self {
+        Self { nodes: vec![] }
+    }
+
+    pub fn add_node<N: Node + 'static>(&mut self, node: N) {
+        self.nodes.push(Box::new(node));
+    }
+
+    pub fn execute(&self, mut image: LinearImage, backend: Backend) -> LinearImage {
+        for node in &self.nodes {
+            match (backend, node.backend()) {
+                (Backend::Cpu, Backend::Cpu) => {
+                    image = node.process_cpu(&image);
+                } //
+                  // (Backend::Cpu, _) => {
+                  //     panic!("Unsupported backend for now");
+                  // }
+            }
+        }
+        image
     }
 }

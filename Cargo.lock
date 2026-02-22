@@ -3,5 +3,38 @@
 version = 4
 
 [[package]]
-name = "maelstrom"
+name = "core"
 version = "0.1.0"
+
+[[package]]
+name = "desktop"
+version = "0.1.0"
+dependencies = [
+ "core",
+ "graph",
+ "image",
+ "ops",
+]
+
+[[package]]
+name = "graph"
+version = "0.1.0"
+dependencies = [
+ "core",
+ "image",
+]
+
+[[package]]
+name = "image"
+version = "0.1.0"
+dependencies = [
+ "core",
+]
+
+[[package]]
+name = "ops"
+version = "0.1.0"
+dependencies = [
+ "graph",
+ "image",
+]

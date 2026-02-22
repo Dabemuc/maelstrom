@@ -1,14 +1,17 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+#[derive(Clone)]
+pub struct LinearImage {
+    pub width: u32,
+    pub height: u32,
+    // pub stride: usize,  // GPU alignment ???
+    pub data: Vec<f32>, // RGBRGBRGB...
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+impl LinearImage {
+    pub fn new(width: u32, height: u32) -> Self {
+        Self {
+            width,
+            height,
+            data: vec![0.0; (width * height * 3) as usize],
+        }
     }
 }

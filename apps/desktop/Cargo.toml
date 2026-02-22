@@ -1,5 +1,5 @@
 [package]
-name = "maelstrom"
+name = "desktop"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,3 +7,4 @@ edition = "2024"
 core = { path = "../../crates/core" }
 image = { path = "../../crates/image" }
 graph = { path = "../../crates/graph" }
+ops = { path = "../../crates/ops" }
