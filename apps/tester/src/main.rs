@@ -1,14 +1,14 @@
-use graph::Graph;
+use io::png_loaeder::load_png;
+use graph::{Graph, Backend};
 use ops::exposure::Exposure;
-use image::linear_image::LinearImage;
 
 fn main() {
-    let img = LinearImage::new(100, 100);
+    let img = load_png(concat!(env!("CARGO_MANIFEST_DIR"), "/test.png")).unwrap();
 
     let mut graph = Graph::new();
     graph.add_node(Exposure { ev: 1.0 });
 
-    let result = graph.execute(img, graph::Backend::Cpu);
+    let result = graph.execute(img, Backend::Cpu);
 
     println!("Processed image: {}x{}", result.width, result.height);
 }
