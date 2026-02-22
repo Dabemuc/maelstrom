@@ -7,3 +7,5 @@ edition = "2024"
 maelstrom_image = { path = "../image", package = "image" }
 maelstrom_core = { path = "../core", package = "core"}
 image = "0.25.9"
+turso = "0.4.4"
+tokio = { version = "1.0", features = ["full"] }
