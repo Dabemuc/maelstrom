@@ -1,6 +1,3 @@
-[package]
-name = "maelstrom"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
+[workspace]
+members = ["apps/desktop", "crates/core", "crates/image", "crates/graph"]
+resolver = "2"
