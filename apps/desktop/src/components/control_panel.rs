@@ -59,7 +59,7 @@ fn icon_button<'a>(
     if is_active {
         btn = btn.style(button::primary);
     } else {
-        btn = btn.style(button::secondary);
+        btn = btn.style(button::subtle);
     }
 
     btn
