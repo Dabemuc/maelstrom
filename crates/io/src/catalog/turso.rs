@@ -1,3 +1,4 @@
+use std::path::Path;
 use turso::{Builder, Connection};
 
 pub struct TursoDB {
@@ -5,19 +6,26 @@ pub struct TursoDB {
 }
 
 impl TursoDB {
-    /// Creates a new Catalog instance.
-    /// Initializes the database connection and ensures the table exists.
-    /// If the file does not exist, it will be created.
-    pub async fn new(path: &str) -> turso::Result<Self> {
+    /// Opens an existing catalog. Fails if the file does not exist.
+    pub async fn open(path: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        if !Path::new(path).exists() {
+            return Err(format!("Catalog file not found: {}", path).into());
+        }
+
         let db = Builder::new_local(path).build().await?;
         let conn = db.connect()?;
 
-        // Create the table if it doesn't exist
-        // We use a simple key-value store for "information"
+        Ok(Self { conn })
+    }
+
+    /// Creates a new catalog (or opens existing) and initializes the schema.
+    pub async fn create(path: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        let db = Builder::new_local(path).build().await?;
+        let conn = db.connect()?;
+
         conn.execute(
-            r#"CREATE TABLE IF NOT EXISTS metadata (
-                key TEXT PRIMARY KEY,
-                value TEXT
+            r#"CREATE TABLE IF NOT EXISTS imported_paths (
+                path TEXT PRIMARY KEY
             )"#,
             (),
         )
@@ -26,32 +34,29 @@ impl TursoDB {
         Ok(Self { conn })
     }
 
-    /// Stores a key-value pair in the catalog.
-    /// If the key already exists, the value is updated.
-    pub async fn set(&self, key: &str, value: &str) -> turso::Result<()> {
+    /// Adds a directory path to the imported paths list.
+    pub async fn add_imported_path(&self, path: &str) -> turso::Result<()> {
         self.conn
             .execute(
-                "INSERT OR REPLACE INTO metadata (key, value) VALUES (?1, ?2)",
-                [key, value],
+                "INSERT OR IGNORE INTO imported_paths (path) VALUES (?1)",
+                [path],
             )
             .await?;
         Ok(())
     }
 
-    /// Retrieves a value by its key.
-    /// Returns None if the key does not exist.
-    pub async fn get(&self, key: &str) -> turso::Result<Option<String>> {
+    /// Retrieves all imported directory paths.
+    pub async fn get_imported_paths(&self) -> turso::Result<Vec<String>> {
         let mut rows = self
             .conn
-            .query("SELECT value FROM metadata WHERE key = ?1", [key])
+            .query("SELECT path FROM imported_paths", ())
             .await?;
 
-        match rows.next().await? {
-            Some(row) => {
-                let value: String = row.get(0)?;
-                Ok(Some(value))
-            }
-            None => Ok(None),
+        let mut paths = Vec::new();
+        while let Some(row) = rows.next().await? {
+            let path: String = row.get(0)?;
+            paths.push(path);
         }
+        Ok(paths)
     }
 }
