@@ -6,23 +6,10 @@ use components::center_stage::center_stage;
 use components::control_panel_bottom::control_panel_bottom;
 use components::control_panel_top::control_panel_top;
 use components::divider::divider;
-use components::sidebar_left::sidebar_left;
-use components::sidebar_right::sidebar_right;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LeftSidebarMode {
-    FileNavigator,
-    Collections,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RightSidebarMode {
-    Edit,
-}
+use components::sidebar_left::{LeftSidebarMode, sidebar_left};
+use components::sidebar_right::{RightSidebarMode, sidebar_right};
 
 pub struct App {
-    pub left_sidebar_visible: bool,
-    pub right_sidebar_visible: bool,
     pub left_sidebar_mode: LeftSidebarMode,
     pub right_sidebar_mode: RightSidebarMode,
 }
@@ -31,18 +18,14 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            left_sidebar_visible: true,
-            right_sidebar_visible: true,
-            left_sidebar_mode: LeftSidebarMode::FileNavigator,
-            right_sidebar_mode: RightSidebarMode::Edit,
+            left_sidebar_mode: LeftSidebarMode::Navigator,
+            right_sidebar_mode: RightSidebarMode::Develop,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum Message {
-    ToggleLeftSidebar,
-    ToggleRightSidebar,
     LeftSidebarClicked(LeftSidebarMode),
     RightSidebarClicked(RightSidebarMode),
 }
@@ -50,21 +33,21 @@ pub enum Message {
 impl App {
     fn update(&mut self, message: Message) {
         match message {
-            Message::ToggleLeftSidebar => self.left_sidebar_visible = !self.left_sidebar_visible,
-            Message::ToggleRightSidebar => self.right_sidebar_visible = !self.right_sidebar_visible,
             Message::LeftSidebarClicked(mode) => {
-                if self.left_sidebar_visible && self.left_sidebar_mode == mode {
-                    self.left_sidebar_visible = false;
+                if self.left_sidebar_mode != LeftSidebarMode::Hidden
+                    && self.left_sidebar_mode == mode
+                {
+                    self.left_sidebar_mode = LeftSidebarMode::Hidden;
                 } else {
-                    self.left_sidebar_visible = true;
                     self.left_sidebar_mode = mode;
                 }
             }
             Message::RightSidebarClicked(mode) => {
-                if self.right_sidebar_visible && self.right_sidebar_mode == mode {
-                    self.right_sidebar_visible = false;
+                if self.right_sidebar_mode != RightSidebarMode::Hidden
+                    && self.right_sidebar_mode == mode
+                {
+                    self.right_sidebar_mode = RightSidebarMode::Hidden;
                 } else {
-                    self.right_sidebar_visible = true;
                     self.right_sidebar_mode = mode;
                 }
             }
@@ -74,13 +57,13 @@ impl App {
     fn view(&self) -> Element<'_, Message> {
         let mut main_content = Row::new().height(Length::Fill);
 
-        if self.left_sidebar_visible {
+        if self.left_sidebar_mode != LeftSidebarMode::Hidden {
             main_content = main_content.push(sidebar_left(self));
         }
 
         main_content = main_content.push(center_stage(self));
 
-        if self.right_sidebar_visible {
+        if self.right_sidebar_mode != RightSidebarMode::Hidden {
             main_content = main_content.push(sidebar_right(self));
         }
 

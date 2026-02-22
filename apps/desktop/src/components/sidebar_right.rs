@@ -3,10 +3,20 @@ use crate::{App, Message};
 use iced::widget::{column, container, row, text};
 use iced::{Element, Length};
 
-pub fn sidebar_right(_state: &App) -> Element<'_, Message> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RightSidebarMode {
+    Develop,
+    Hidden,
+}
+
+pub fn sidebar_right(state: &App) -> Element<'_, Message> {
     let content = row![
         divider(true),
-        column![text("Right Sidebar").size(24),].width(Length::Fill)
+        column![
+            text("Right Sidebar").size(24),
+            text(format!("{:?}", state.right_sidebar_mode))
+        ]
+        .width(Length::Fill)
     ]
     .width(200);
 

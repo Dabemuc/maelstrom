@@ -7,14 +7,14 @@ pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
     let left_controls = row![
         icon_button(
             svg::Handle::from_memory(include_bytes!("../../assets/icons/folder.svg")),
-            "File Navigator",
-            state.left_sidebar_visible && state.left_sidebar_mode == LeftSidebarMode::FileNavigator
+            "Navigator",
+            state.left_sidebar_mode == LeftSidebarMode::Navigator
         )
-        .on_press(Message::LeftSidebarClicked(LeftSidebarMode::FileNavigator)),
+        .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Navigator)),
         icon_button(
             svg::Handle::from_memory(include_bytes!("../../assets/icons/layers.svg")),
             "Collections",
-            state.left_sidebar_visible && state.left_sidebar_mode == LeftSidebarMode::Collections
+            state.left_sidebar_mode == LeftSidebarMode::Collections
         )
         .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Collections)),
     ]
@@ -23,10 +23,10 @@ pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
     let right_controls = row![
         icon_button(
             svg::Handle::from_memory(include_bytes!("../../assets/icons/edit.svg")),
-            "Edit",
-            state.right_sidebar_visible && state.right_sidebar_mode == RightSidebarMode::Edit
+            "Develop",
+            state.right_sidebar_mode == RightSidebarMode::Develop
         )
-        .on_press(Message::RightSidebarClicked(RightSidebarMode::Edit)),
+        .on_press(Message::RightSidebarClicked(RightSidebarMode::Develop)),
     ]
     .spacing(10);
 
