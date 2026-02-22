@@ -49,16 +49,20 @@ fn icon_button<'a>(
     is_active: bool,
 ) -> iced::widget::Button<'a, Message> {
     let icon = svg(handle)
-        .width(Length::Fixed(24.0))
-        .height(Length::Fixed(24.0));
+        .width(Length::Fixed(16.0))
+        .height(Length::Fixed(16.0))
+        .style(move |theme: &iced::Theme, _status| {
+            let palette = theme.extended_palette();
+            iced::widget::svg::Style {
+                color: Some(if is_active {
+                    palette.primary.base.color
+                } else {
+                    palette.secondary.base.color
+                }),
+            }
+        });
 
-    let mut btn = button(tooltip(icon, label, Position::Top));
+    let btn = button(tooltip(icon, label, Position::Top));
 
-    if is_active {
-        btn = btn.style(button::primary);
-    } else {
-        btn = btn.style(button::subtle);
-    }
-
-    btn
+    btn.style(button::text)
 }
