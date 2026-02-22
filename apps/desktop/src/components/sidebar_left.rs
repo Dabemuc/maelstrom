@@ -1,9 +1,14 @@
+use crate::components::divider::divider;
 use crate::{App, Message};
-use iced::widget::{column, container, text};
+use iced::widget::{column, container, row, text};
 use iced::{Element, Length};
 
 pub fn sidebar_left(_state: &App) -> Element<'_, Message> {
-    let content = column![text("Left Sidebar").size(24),].width(200);
+    let content = row![
+        column![text("Left Sidebar").size(24),].width(Length::Fill),
+        divider(true)
+    ]
+    .width(200);
 
     container(content)
         .width(200)

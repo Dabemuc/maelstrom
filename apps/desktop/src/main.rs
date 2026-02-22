@@ -5,6 +5,7 @@ mod components;
 use components::center_stage::center_stage;
 use components::control_panel_bottom::control_panel_bottom;
 use components::control_panel_top::control_panel_top;
+use components::divider::divider;
 use components::sidebar_left::sidebar_left;
 use components::sidebar_right::sidebar_right;
 
@@ -85,6 +86,7 @@ impl App {
 
         column![
             control_panel_top(self),
+            divider(false),
             main_content,
             control_panel_bottom(self),
         ]
@@ -129,7 +131,6 @@ fn main() -> iced::Result {
         },
         ..Default::default()
     };
-
 
     // 2. Launch the application
     iced::application(App::default, App::update, App::view)
