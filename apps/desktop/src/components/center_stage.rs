@@ -1,12 +1,28 @@
 use crate::{App, Message};
-use iced::Element;
-use iced::widget::{column, text};
+use iced::{Element, Alignment, Length};
+use iced::widget::{button, column, row, text};
 
-pub fn center_stage(_state: &App) -> Element<'_, Message> {
+pub fn center_stage(state: &App) -> Element<'_, Message> {
     column![
         text("Center Stage").size(40),
-        text("This expands to fill the middle!")
+        row![
+            button(if state.left_sidebar_visible {
+                "Hide Left Sidebar"
+            } else {
+                "Show Left Sidebar"
+            })
+            .on_press(Message::ToggleLeftSidebar),
+            button(if state.right_sidebar_visible {
+                "Hide Right Sidebar"
+            } else {
+                "Show Right Sidebar"
+            })
+            .on_press(Message::ToggleRightSidebar),
+        ]
+        .spacing(20)
     ]
-    .width(iced::Length::Fill)
+    .width(Length::Fill)
+    .align_x(Alignment::Center)
+    .spacing(40)
     .into()
 }
