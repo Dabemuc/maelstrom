@@ -1,4 +1,5 @@
-use graph::{Backend, Graph};
+use graph::node::Backend;
+use graph::graph::Graph;
 use io::png::{load_png, save_png};
 use ops::exposure::Exposure;
 
@@ -6,7 +7,7 @@ fn main() {
     let img = load_png(concat!(env!("CARGO_MANIFEST_DIR"), "/test.png")).unwrap();
 
     let mut graph = Graph::new();
-    graph.add_node(Exposure { ev: 1.0 });
+    graph.add_node(Exposure { ev: 2.0 });
 
     let result = graph.execute(img, Backend::Cpu);
 

@@ -1,4 +1,4 @@
-use graph::{Node, Backend};
+use graph::node::{Node, Backend};
 use image::linear_image::LinearImage;
 
 pub struct Exposure {
