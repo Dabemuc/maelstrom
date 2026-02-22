@@ -1,7 +1,7 @@
 # Next steps
 - [ ] Catalog 
-  - [ ] Turso sqlite file that contains:
-    - [ ] info about imported directories
+  - [x] Turso sqlite file that contains:
+    - [x] info about imported directories
     - [ ] metadate of imported files
       - [ ] Nodegraph (if exists)
       - [ ] preview file location

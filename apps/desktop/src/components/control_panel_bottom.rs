@@ -65,7 +65,7 @@ fn icon_button<'a>(
                 color: Some(if is_active {
                     palette.primary.base.color
                 } else {
-                    palette.secondary.base.color
+                    palette.secondary.strong.color
                 }),
             }
         });

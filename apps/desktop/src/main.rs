@@ -9,9 +9,16 @@ use components::divider::divider;
 use components::sidebar_left::{LeftSidebarMode, sidebar_left};
 use components::sidebar_right::{RightSidebarMode, sidebar_right};
 
+pub enum ViewMode {
+    Library,
+    Develop,
+    NoCatalog,
+}
+
 pub struct App {
     pub left_sidebar_mode: LeftSidebarMode,
     pub right_sidebar_mode: RightSidebarMode,
+    pub view_mode: ViewMode,
 }
 
 // init state
@@ -19,7 +26,8 @@ impl Default for App {
     fn default() -> Self {
         Self {
             left_sidebar_mode: LeftSidebarMode::Navigator,
-            right_sidebar_mode: RightSidebarMode::Develop,
+            right_sidebar_mode: RightSidebarMode::Hidden,
+            view_mode: ViewMode::NoCatalog,
         }
     }
 }
@@ -28,6 +36,8 @@ impl Default for App {
 pub enum Message {
     LeftSidebarClicked(LeftSidebarMode),
     RightSidebarClicked(RightSidebarMode),
+    CreateCatalog,
+    ImportCatalog,
 }
 
 impl App {
@@ -50,6 +60,12 @@ impl App {
                 } else {
                     self.right_sidebar_mode = mode;
                 }
+            }
+            Message::CreateCatalog => {
+                println!("Click create")
+            }
+            Message::ImportCatalog => {
+                println!("Click import")
             }
         }
     }
@@ -80,7 +96,7 @@ impl App {
         // Base dark palette
         let palette = iced::theme::Palette {
             background: iced::color!(0x1e1e24), // Slate-ish dark hue
-            text: iced::color!(0xe0e0e0),
+            text: iced::color!(0xb0b0b5),
             primary: iced::color!(0x4A90E2),
             success: iced::color!(0x4CAF50),
             warning: iced::color!(0xFFC107),
