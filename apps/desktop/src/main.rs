@@ -1,13 +1,28 @@
-use iced::{Element, run};
+use iced::widget::{Row, column};
+use iced::{Element, Length, run};
 
 mod components;
 use components::center_stage::center_stage;
+use components::control_panel::control_panel;
 use components::sidebar_left::sidebar_left;
 use components::sidebar_right::sidebar_right;
 
-struct App {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeftSidebarMode {
+    FileNavigator,
+    Collections,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RightSidebarMode {
+    Edit,
+}
+
+pub struct App {
     pub left_sidebar_visible: bool,
     pub right_sidebar_visible: bool,
+    pub left_sidebar_mode: LeftSidebarMode,
+    pub right_sidebar_mode: RightSidebarMode,
 }
 
 // init state
@@ -16,14 +31,18 @@ impl Default for App {
         Self {
             left_sidebar_visible: true,
             right_sidebar_visible: true,
+            left_sidebar_mode: LeftSidebarMode::FileNavigator,
+            right_sidebar_mode: RightSidebarMode::Edit,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Message {
+pub enum Message {
     ToggleLeftSidebar,
     ToggleRightSidebar,
+    LeftSidebarClicked(LeftSidebarMode),
+    RightSidebarClicked(RightSidebarMode),
 }
 
 impl App {
@@ -31,23 +50,39 @@ impl App {
         match message {
             Message::ToggleLeftSidebar => self.left_sidebar_visible = !self.left_sidebar_visible,
             Message::ToggleRightSidebar => self.right_sidebar_visible = !self.right_sidebar_visible,
+            Message::LeftSidebarClicked(mode) => {
+                if self.left_sidebar_visible && self.left_sidebar_mode == mode {
+                    self.left_sidebar_visible = false;
+                } else {
+                    self.left_sidebar_visible = true;
+                    self.left_sidebar_mode = mode;
+                }
+            }
+            Message::RightSidebarClicked(mode) => {
+                if self.right_sidebar_visible && self.right_sidebar_mode == mode {
+                    self.right_sidebar_visible = false;
+                } else {
+                    self.right_sidebar_visible = true;
+                    self.right_sidebar_mode = mode;
+                }
+            }
         }
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let mut layout = iced::widget::Row::new();
+        let mut main_content = Row::new().height(Length::Fill);
 
         if self.left_sidebar_visible {
-            layout = layout.push(sidebar_left(self));
+            main_content = main_content.push(sidebar_left(self));
         }
 
-        layout = layout.push(center_stage(self));
+        main_content = main_content.push(center_stage(self));
 
         if self.right_sidebar_visible {
-            layout = layout.push(sidebar_right(self));
+            main_content = main_content.push(sidebar_right(self));
         }
 
-        layout.into()
+        column![main_content, control_panel(self),].into()
     }
 }
 
