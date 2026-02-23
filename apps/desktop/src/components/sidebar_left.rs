@@ -1,12 +1,11 @@
 use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::{App, Message};
-use iced::Alignment::Center;
 use iced::alignment::Horizontal::Right;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::{Space, button, column, container, row, svg, text};
-use iced::{Element, Length};
+use iced::{Alignment::Center, Element, Length};
 
 use iced::widget::Scrollable;
 use std::collections::{HashMap, HashSet};
@@ -20,32 +19,18 @@ pub enum LeftSidebarMode {
     Hidden,
 }
 
+/* ============================================================
+   PUBLIC SIDEBAR
+============================================================ */
+
 pub fn sidebar_left(state: &App) -> Element<'_, Message> {
     let content = row![
-        Scrollable::new(
-            container(match state.left_sidebar_mode {
-                LeftSidebarMode::Navigator => navigator_view(state),
-                LeftSidebarMode::Collections => collections_view(state),
-                LeftSidebarMode::Hidden => text("Hidden").into(),
-            })
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_x(Center)
-            .align_y(Center)
-        )
-        .width(Length::Fill)
-        .height(Length::Fill),
-        // .direction(Direction::Horizontal(Scrollbar::new()))
-        // .direction(Direction::Both {
-        //     vertical: Scrollbar::new(),
-        //     horizontal: Scrollbar::new()
-        // }),
-        // .style(|theme: &iced::Theme, status| {
-        //     let mut style = scrollable::default(theme, status);
-        //     style.container.background = Some(Background::Color(Color::WHITE));
-        //     style
-        // }),
-        divider(true) // vertical divider towards center stage
+        match state.left_sidebar_mode {
+            LeftSidebarMode::Navigator => navigator_view(state),
+            LeftSidebarMode::Collections => collections_view(state),
+            LeftSidebarMode::Hidden => text("Hidden").into(),
+        },
+        divider(true)
     ];
 
     container(content)
@@ -62,68 +47,97 @@ pub fn sidebar_left(state: &App) -> Element<'_, Message> {
         .into()
 }
 
+/* ============================================================
+   NAVIGATOR VIEW
+============================================================ */
+
 fn navigator_view(state: &App) -> Element<'_, Message> {
-    if let Some(_catalog) = &state.catalog {
-        // Build directory elements
-        let dir_elements: Vec<Element<_>> = state
-            .imported_dirs
-            .iter()
-            .map(|path| {
-                // build file tree from path
-                let tree = build_folder_tree(
-                    path,
-                    &state.navigator_state.expanded,
-                    &state.navigator_state.selected,
-                    &state.navigator_state.image_counts,
-                    0,
-                );
-
-                column![tree, divider(false)].padding([5, 5]).into()
-            })
-            .collect();
-
-        // Start column with header row and divider
-        let mut col = column![
-            row![
-                Space::new().width(Length::Fill),
-                icon_button(
-                    svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
-                    "Import new folder",
-                    false
-                )
-                .on_press(Message::ImportDirectory)
-            ]
-            .align_y(Center),
-            divider(false)
-        ]
-        .width(Length::Shrink)
-        .height(Length::Fill);
-
-        // Push each directory element individually
-        for elem in dir_elements {
-            col = col.push(elem);
-        }
-
-        col.into()
-    } else {
-        text("No Catalog").into()
+    if state.catalog.is_none() {
+        return text("No Catalog").width(Length::Fill).into();
     }
+
+    // -------- HEADER (spans full width) --------
+    let header = row![
+        Space::new().width(Length::Fill),
+        icon_button(
+            svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
+            "Import new folder",
+            false
+        )
+        .on_press(Message::ImportDirectory)
+    ]
+    .height(32)
+    .align_y(Center);
+
+    // -------- BUILD TREE ROWS --------
+    let mut rows: Vec<TreeRow> = Vec::new();
+
+    for path in &state.imported_dirs {
+        rows.extend(build_folder_rows(
+            path,
+            &state.navigator_state.expanded,
+            &state.navigator_state.selected,
+            &state.navigator_state.image_counts,
+            0,
+        ));
+    }
+
+    let mut tree_column = column![];
+    let mut count_column = column![];
+
+    for row_data in rows {
+        tree_column = tree_column.push(row_data.tree);
+        count_column = count_column.push(row_data.count);
+        if row_data.is_root {
+            tree_column = tree_column.push(divider(false));
+            count_column = count_column.push(divider(false));
+        }
+    }
+
+    // Horizontal scroll ONLY on tree column
+    let tree_scroll = Scrollable::new(tree_column)
+        .direction(Direction::Horizontal(Scrollbar::new()))
+        .width(Length::Fill);
+
+    let body_row = row![
+        tree_scroll,
+        container(count_column).width(25),
+        Space::new().width(15)
+    ]
+    .padding(12);
+
+    let vertical_scroll = Scrollable::new(body_row).height(Length::Fill);
+
+    column![header, divider(false), vertical_scroll]
+        .height(Length::Fill)
+        .into()
 }
 
-fn build_folder_tree(
+/* ============================================================
+   TREE ROW STRUCT
+============================================================ */
+
+struct TreeRow {
+    tree: Element<'static, Message>,
+    count: Element<'static, Message>,
+    is_root: bool,
+}
+
+/* ============================================================
+   RECURSIVE TREE BUILDER
+============================================================ */
+
+fn build_folder_rows(
     path: &PathBuf,
     expanded: &HashSet<PathBuf>,
     selected: &Option<PathBuf>,
     image_counts: &HashMap<PathBuf, u32>,
     depth: usize,
-) -> Element<'static, Message> {
-    let indent = 20 * depth as u16;
+) -> Vec<TreeRow> {
+    let indent = 20.0 * depth as f32;
     let is_expanded = expanded.contains(path);
     let is_selected = selected.as_ref() == Some(path);
 
-    let mut col = column![];
-
-    // Folder name
     let label = path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
@@ -131,67 +145,40 @@ fn build_folder_tree(
 
     let image_count = image_counts.get(path).copied().unwrap_or(0);
 
-    // --- Expand / Collapse Icon (only clickable area for toggling) ---
     let icon = if is_expanded { "▼" } else { "▶" };
 
-    let expand_button = button(
-        container(
-            text(icon)
-                .size(14)
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .align_x(Center)
-                .align_y(Center),
-        )
-        .width(Length::Fill)
-        .height(Length::Fill),
-    )
-    .width(24)
-    .height(24)
-    .padding(0)
-    .style(|theme: &iced::Theme, status: button::Status| {
-        let mut style = button::text(theme, status);
-        if status == button::Status::Hovered {
-            style.background = Some(iced::Color::from_rgba(0.0, 0.0, 0.0, 0.1).into());
-            style.border.radius = 4.0.into();
-        }
-        style
-    })
-    .on_press(Message::ToggleDirectory(path.clone()));
+    let expand_button = button(text(icon).size(14))
+        .width(24)
+        .height(24)
+        .padding(0)
+        .on_press(Message::ToggleDirectory(path.clone()));
 
-    // --- Selectable row body ---
-    let row_content = row![
-        expand_button, // 24px
-        container(text(label).size(14).wrapping(text::Wrapping::None))
-            .clip(true)
-            .width(Length::Fill), // 64px
-        // Space::new().width(10), // 10px
-        text(image_count.to_string())
-            .size(14)
-            .align_x(Right)
-            .width(24), // 24px
+    let tree_content = row![
+        Space::new().width(indent),
+        expand_button,
+        container(text(label).size(14).wrapping(text::Wrapping::None)).width(Length::Shrink)
     ]
     .spacing(8)
-    .height(Length::Fill)
-    .width(200)
     .align_y(Center);
 
-    let row = row![
-        Space::new().width(Length::Fixed(indent as f32)),
-        row_content
-    ];
-
-    // Make the entire row (except icon button) selectable
-    let selectable_row = button(row)
-        .height(32) // your desired row height
-        .padding([0, 8]) // remove default button padding
+    let selectable_row = button(tree_content)
+        .height(32)
+        .padding([0, 8])
         .on_press(Message::SelectDirectory(path.clone()))
         .style(folder_row_style(is_selected));
-    // .width(Length::Shrink);
 
-    col = col.push(selectable_row);
+    let count_cell = container(text(image_count.to_string()).size(14).align_x(Right))
+        .width(Length::Fill)
+        .height(32)
+        .align_x(Right)
+        .align_y(Center);
 
-    // --- Render children folders only ---
+    let mut rows = vec![TreeRow {
+        tree: selectable_row.into(),
+        count: count_cell.into(),
+        is_root: depth == 0,
+    }];
+
     if is_expanded {
         if let Ok(read_dir) = fs::read_dir(path) {
             let mut entries: Vec<_> = read_dir.flatten().filter(|e| e.path().is_dir()).collect();
@@ -199,9 +186,8 @@ fn build_folder_tree(
             entries.sort_by_key(|e| e.path());
 
             for entry in entries {
-                let child_path = entry.path();
-                col = col.push(build_folder_tree(
-                    &child_path,
+                rows.extend(build_folder_rows(
+                    &entry.path(),
                     expanded,
                     selected,
                     image_counts,
@@ -211,10 +197,12 @@ fn build_folder_tree(
         }
     }
 
-    Scrollable::new(col)
-        .direction(Direction::Horizontal(Scrollbar::new()))
-        .into()
+    rows
 }
+
+/* ============================================================
+   ROW STYLE
+============================================================ */
 
 fn folder_row_style(
     is_selected: bool,
@@ -233,6 +221,10 @@ fn folder_row_style(
         style
     }
 }
+
+/* ============================================================
+   COLLECTIONS VIEW
+============================================================ */
 
 fn collections_view(state: &App) -> Element<'_, Message> {
     if state.catalog.is_some() {
