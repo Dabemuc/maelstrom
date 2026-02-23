@@ -23,6 +23,7 @@ pub struct App {
     pub left_sidebar_mode: LeftSidebarMode,
     pub right_sidebar_mode: RightSidebarMode,
     pub view_mode: ViewMode,
+    pub catalog: Option<Catalog>,
 }
 
 // init state
@@ -32,6 +33,7 @@ impl Default for App {
             left_sidebar_mode: LeftSidebarMode::Navigator,
             right_sidebar_mode: RightSidebarMode::Hidden,
             view_mode: ViewMode::NoCatalog,
+            catalog: None,
         }
     }
 }
@@ -42,7 +44,8 @@ pub enum Message {
     RightSidebarClicked(RightSidebarMode),
     CreateCatalog,
     SelectCatalog,
-    CatalogLoaded(Result<Catalog, CatalogError>),
+    CatalogLoadAttempted(Result<Catalog, CatalogError>),
+    CatalogLoaded,
 }
 
 impl App {
@@ -70,7 +73,12 @@ impl App {
             }
             Message::CreateCatalog => {
                 println!("Click create");
-                Task::none()
+                if let Some(path) = FileDialog::new().pick_folder() {
+                    return Task::perform(Catalog::create(path), Message::CatalogLoadAttempted);
+                } else {
+                    println!("FileDialog canceled");
+                    Task::none()
+                }
             }
             Message::SelectCatalog => {
                 println!("Click select");
@@ -78,21 +86,41 @@ impl App {
                     .add_filter("Maelstrom Catalog File", &["mcat"])
                     .pick_file()
                 {
-                    return Task::perform(Catalog::load(path), Message::CatalogLoaded);
+                    return Task::perform(Catalog::load(path), Message::CatalogLoadAttempted);
                 } else {
+                    println!("FileDialog canceled");
                     Task::none()
                 }
             }
-            Message::CatalogLoaded(result) => match result {
-                Ok(_) => {
-                    println!("Loaded");
-                    Task::none()
+            Message::CatalogLoadAttempted(result) => {
+                match result {
+                    Ok(catalog) => {
+                        // Store catalog in state
+                        self.catalog = Some(catalog.clone());
+
+                        // Clone catalog for async task
+                        let catalog_for_task = catalog.clone();
+
+                        // Return a Task that prints metadata asynchronously
+                        return Task::perform(
+                            async move {
+                                // Any errors ignored here, just printing
+                                catalog_for_task.print_metadata().await.ok();
+                            },
+                            |_| Message::CatalogLoaded, // Dummy callback, owns a clone
+                        );
+                    }
+                    Err(e) => {
+                        eprintln!("Error loading catalog: {}", e);
+                        Task::none()
+                    }
                 }
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    Task::none()
-                }
-            },
+            }
+            Message::CatalogLoaded => {
+                self.view_mode = ViewMode::Library;
+
+                Task::none()
+            }
         }
     }
 

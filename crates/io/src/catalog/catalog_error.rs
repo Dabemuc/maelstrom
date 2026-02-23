@@ -14,6 +14,9 @@ pub enum CatalogError {
 
     #[error("Catalog version missing in existing file")]
     MissingVersion,
+
+    #[error("Catalog already exists at {0:?}")]
+    AlreadyExists(PathBuf),
 }
 
 // Convert boxed dynamic errors
