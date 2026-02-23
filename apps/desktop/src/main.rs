@@ -46,6 +46,9 @@ pub enum Message {
     SelectCatalog,
     CatalogLoadAttempted(Result<Catalog, CatalogError>),
     CatalogLoaded,
+    ImportDirectory,
+    CatalogUpdated,
+    ErrorMessage(String),
 }
 
 impl App {
@@ -119,6 +122,50 @@ impl App {
             Message::CatalogLoaded => {
                 self.view_mode = ViewMode::Library;
 
+                Task::none()
+            }
+            Message::ImportDirectory => {
+                println!("Click import");
+
+                // Ensure catalog is loaded
+                let catalog = if let Some(c) = self.catalog.clone() {
+                    c
+                } else {
+                    println!("Cannot import directory: no catalog loaded");
+                    return Task::none();
+                };
+
+                // Pick a folder
+                if let Some(path) = FileDialog::new().pick_folder() {
+                    let catalog_clone = catalog.clone();
+                    return Task::perform(
+                        async move {
+                            // Import the folder
+                            let result = catalog_clone.import_directory(path.clone()).await;
+
+                            // Print metadata after successful import
+                            if result.is_ok() {
+                                catalog_clone.print_metadata().await.ok();
+                            }
+
+                            result
+                        },
+                        |res| match res {
+                            Ok(_) => Message::CatalogUpdated,
+                            Err(e) => {
+                                eprintln!("Failed to import directory: {}", e);
+                                Message::ErrorMessage(format!("Failed to import directory"))
+                            }
+                        },
+                    );
+                }
+
+                println!("FileDialog canceled");
+                Task::none()
+            }
+            Message::CatalogUpdated => Task::none(),
+            Message::ErrorMessage(_msg) => {
+                // eventually show the message in a popup or smth
                 Task::none()
             }
         }

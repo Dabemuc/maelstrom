@@ -1,6 +1,8 @@
+use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::{App, Message};
-use iced::widget::{column, container, row, text};
+use iced::Alignment::Center;
+use iced::widget::{Space, column, container, row, svg, text};
 use iced::{Element, Length};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,14 +14,18 @@ pub enum LeftSidebarMode {
 
 pub fn sidebar_left(state: &App) -> Element<'_, Message> {
     let content = row![
-        column![
-            text("Left Sidebar").size(24),
-            text(format!("{:?}", state.left_sidebar_mode))
-        ]
-        .width(Length::Fill),
+        container(match state.left_sidebar_mode {
+            LeftSidebarMode::Navigator => navigator_view(state),
+            LeftSidebarMode::Collections => collections_view(state),
+            LeftSidebarMode::Hidden => text("Hidden").into(),
+        })
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .padding(10)
+        .align_x(Center)
+        .align_y(Center),
         divider(true)
-    ]
-    .width(200);
+    ];
 
     container(content)
         .width(200)
@@ -33,4 +39,35 @@ pub fn sidebar_left(state: &App) -> Element<'_, Message> {
             }
         })
         .into()
+}
+
+fn navigator_view(state: &App) -> Element<'_, Message> {
+    if state.catalog.is_some() {
+        column![
+            row![
+                Space::new().width(Length::Fill),
+                icon_button(
+                    svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
+                    "Import new folder",
+                    false
+                )
+                .on_press(Message::ImportDirectory)
+            ]
+            .align_y(Center),
+            divider(false)
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
+    } else {
+        text("No Catalog").into()
+    }
+}
+
+fn collections_view(state: &App) -> Element<'_, Message> {
+    if state.catalog.is_some() {
+        text("Catalog collections placeholder").into()
+    } else {
+        text("No Catalog").into()
+    }
 }

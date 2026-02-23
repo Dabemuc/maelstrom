@@ -1,6 +1,6 @@
+use crate::components::common::svg_button::icon_button;
 use crate::{App, LeftSidebarMode, Message, RightSidebarMode};
-use iced::widget::tooltip::Position;
-use iced::widget::{Space, button, container, row, svg, tooltip};
+use iced::widget::{Space, container, row, svg};
 use iced::{Alignment, Element, Length};
 
 pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
@@ -49,35 +49,4 @@ pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
         }
     })
     .into()
-}
-
-fn icon_button<'a>(
-    handle: svg::Handle,
-    label: &'a str,
-    is_active: bool,
-) -> iced::widget::Button<'a, Message> {
-    let icon = svg(handle)
-        .width(Length::Fixed(16.0))
-        .height(Length::Fixed(16.0))
-        .style(move |theme: &iced::Theme, _status| {
-            let palette = theme.extended_palette();
-            iced::widget::svg::Style {
-                color: Some(if is_active {
-                    palette.primary.base.color
-                } else {
-                    palette.secondary.strong.color
-                }),
-            }
-        });
-
-    let btn = button(tooltip(icon, label, Position::Top)).padding(5);
-
-    btn.style(|theme: &iced::Theme, status: button::Status| {
-        let mut style = button::text(theme, status);
-        if status == button::Status::Hovered {
-            style.background = Some(iced::Color::from_rgba(0.0, 0.0, 0.0, 0.2).into());
-            style.border.radius = 4.0.into();
-        }
-        style
-    })
 }
