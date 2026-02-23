@@ -1,11 +1,13 @@
 use super::turso::TursoDB;
 use crate::catalog::catalog_error::CatalogError;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 const CATALOG_VERSION: u16 = 1;
 
+#[derive(Clone)]
 pub struct Catalog {
-    db: TursoDB,
+    db: Arc<TursoDB>,
 }
 
 impl Catalog {
@@ -27,7 +29,7 @@ impl Catalog {
             .map_err(|e| CatalogError::Database(e.to_string()))?;
 
         match version {
-            Some(v) if v == CATALOG_VERSION => Ok(Self { db }),
+            Some(v) if v == CATALOG_VERSION => Ok(Self { db: Arc::new(db) }),
             Some(v) => Err(CatalogError::VersionMismatch {
                 expected: CATALOG_VERSION,
                 found: v,
@@ -49,14 +51,14 @@ impl Catalog {
 
         let existing_version = db.get_version().await?;
         match existing_version {
-            Some(v) if v == CATALOG_VERSION => Ok(Self { db }),
+            Some(v) if v == CATALOG_VERSION => Ok(Self { db: Arc::new(db) }),
             Some(v) => Err(CatalogError::VersionMismatch {
                 expected: CATALOG_VERSION,
                 found: v,
             }),
             None => {
                 db.set_version(CATALOG_VERSION).await?;
-                Ok(Self { db })
+                Ok(Self { db: Arc::new(db) })
             }
         }
     }
@@ -77,5 +79,11 @@ impl Catalog {
     pub async fn get_imported_directories(&self) -> Result<Vec<PathBuf>, CatalogError> {
         let paths = self.db.get_imported_paths().await?;
         Ok(paths.into_iter().map(PathBuf::from).collect())
+    }
+}
+
+impl std::fmt::Debug for Catalog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Catalog").finish()
     }
 }

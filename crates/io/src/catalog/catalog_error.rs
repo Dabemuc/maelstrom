@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum CatalogError {
     #[error("Invalid path encoding: {0:?}")]
     InvalidPathEncoding(PathBuf),

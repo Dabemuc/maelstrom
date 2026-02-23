@@ -36,7 +36,7 @@ impl Default for App {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Message {
     LeftSidebarClicked(LeftSidebarMode),
     RightSidebarClicked(RightSidebarMode),
@@ -46,7 +46,7 @@ pub enum Message {
 }
 
 impl App {
-    fn update(&mut self, message: Message) {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::LeftSidebarClicked(mode) => {
                 if self.left_sidebar_mode != LeftSidebarMode::Hidden
@@ -56,6 +56,7 @@ impl App {
                 } else {
                     self.left_sidebar_mode = mode;
                 }
+                Task::none()
             }
             Message::RightSidebarClicked(mode) => {
                 if self.right_sidebar_mode != RightSidebarMode::Hidden
@@ -65,9 +66,11 @@ impl App {
                 } else {
                     self.right_sidebar_mode = mode;
                 }
+                Task::none()
             }
             Message::CreateCatalog => {
                 println!("Click create");
+                Task::none()
             }
             Message::SelectCatalog => {
                 println!("Click select");
@@ -75,12 +78,20 @@ impl App {
                     .add_filter("Maelstrom Catalog File", &["mcat"])
                     .pick_file()
                 {
-                    Task::perform(Catalog::load(path), Message::CatalogLoaded);
+                    return Task::perform(Catalog::load(path), Message::CatalogLoaded);
+                } else {
+                    Task::none()
                 }
             }
             Message::CatalogLoaded(result) => match result {
-                Ok(_) => println!("Loaded"),
-                Err(e) => eprintln!("Error: {}", e),
+                Ok(_) => {
+                    println!("Loaded");
+                    Task::none()
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    Task::none()
+                }
             },
         }
     }
