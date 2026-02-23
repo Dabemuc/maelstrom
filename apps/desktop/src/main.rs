@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use iced::widget::{Row, column};
 use iced::{Element, Length, Task};
 
@@ -24,6 +26,7 @@ pub struct App {
     pub right_sidebar_mode: RightSidebarMode,
     pub view_mode: ViewMode,
     pub catalog: Option<Catalog>,
+    pub imported_dirs: Vec<PathBuf>,
 }
 
 // init state
@@ -34,6 +37,7 @@ impl Default for App {
             right_sidebar_mode: RightSidebarMode::Hidden,
             view_mode: ViewMode::NoCatalog,
             catalog: None,
+            imported_dirs: Vec::new(),
         }
     }
 }
@@ -47,7 +51,8 @@ pub enum Message {
     CatalogLoadAttempted(Result<Catalog, CatalogError>),
     CatalogLoaded,
     ImportDirectory,
-    CatalogUpdated,
+    LoadImportedDirectories,
+    ImportedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
     ErrorMessage(String),
 }
 
@@ -122,7 +127,9 @@ impl App {
             Message::CatalogLoaded => {
                 self.view_mode = ViewMode::Library;
 
-                Task::none()
+                let load_dirs_task = Task::perform(async {}, |_| Message::LoadImportedDirectories);
+
+                load_dirs_task.chain(Task::none())
             }
             Message::ImportDirectory => {
                 println!("Click import");
@@ -151,7 +158,7 @@ impl App {
                             result
                         },
                         |res| match res {
-                            Ok(_) => Message::CatalogUpdated,
+                            Ok(_) => Message::LoadImportedDirectories,
                             Err(e) => {
                                 eprintln!("Failed to import directory: {}", e);
                                 Message::ErrorMessage(format!("Failed to import directory"))
@@ -163,7 +170,31 @@ impl App {
                 println!("FileDialog canceled");
                 Task::none()
             }
-            Message::CatalogUpdated => Task::none(),
+            Message::LoadImportedDirectories => {
+                if let Some(catalog) = &self.catalog {
+                    let catalog_clone = catalog.clone();
+                    return Task::perform(
+                        async move { catalog_clone.get_imported_directories().await },
+                        Message::ImportedDirectoriesLoadAttempted,
+                    );
+                }
+                Task::none()
+            }
+            Message::ImportedDirectoriesLoadAttempted(result) => {
+                match result {
+                    Ok(paths) => {
+                        self.imported_dirs = paths.clone();
+                        println!("Successfully loaded imported directories into state")
+                    }
+                    Err(e) => {
+                        println!(
+                            "Error while Loading imported directories from catalog: {0:?}",
+                            e
+                        )
+                    }
+                }
+                Task::none()
+            }
             Message::ErrorMessage(_msg) => {
                 // eventually show the message in a popup or smth
                 Task::none()

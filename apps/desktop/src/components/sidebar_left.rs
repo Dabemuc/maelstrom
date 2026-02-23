@@ -42,8 +42,28 @@ pub fn sidebar_left(state: &App) -> Element<'_, Message> {
 }
 
 fn navigator_view(state: &App) -> Element<'_, Message> {
-    if state.catalog.is_some() {
-        column![
+    if let Some(_catalog) = &state.catalog {
+        // Build directory elements
+        let dir_elements: Vec<Element<_>> = state
+            .imported_dirs
+            .iter()
+            .map(|path| {
+                // build file tree from path
+                // TODO
+                
+                let mut col = column![text(path.to_string_lossy()), divider(false)];
+                
+                // insert file tree into col
+                // TODO
+                
+                col = col.push(divider(false));
+                
+                col.into()
+            })
+            .collect();
+
+        // Start column with header row and divider
+        let mut col = column![
             row![
                 Space::new().width(Length::Fill),
                 icon_button(
@@ -57,8 +77,14 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
             divider(false)
         ]
         .width(Length::Fill)
-        .height(Length::Fill)
-        .into()
+        .height(Length::Fill);
+
+        // Push each directory element individually
+        for elem in dir_elements {
+            col = col.push(elem);
+        }
+
+        col.into()
     } else {
         text("No Catalog").into()
     }
