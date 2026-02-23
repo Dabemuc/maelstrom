@@ -2,7 +2,9 @@ use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::{App, Message};
 use iced::Alignment::Center;
+use iced::alignment::Horizontal::Right;
 use iced::border::Radius;
+use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::{Space, button, column, container, row, svg, text};
 use iced::{Element, Length};
 
@@ -28,17 +30,26 @@ pub fn sidebar_left(state: &App) -> Element<'_, Message> {
             })
             .width(Length::Fill)
             .height(Length::Fill)
-            .padding(10)
             .align_x(Center)
             .align_y(Center)
         )
         .width(Length::Fill)
         .height(Length::Fill),
+        // .direction(Direction::Horizontal(Scrollbar::new()))
+        // .direction(Direction::Both {
+        //     vertical: Scrollbar::new(),
+        //     horizontal: Scrollbar::new()
+        // }),
+        // .style(|theme: &iced::Theme, status| {
+        //     let mut style = scrollable::default(theme, status);
+        //     style.container.background = Some(Background::Color(Color::WHITE));
+        //     style
+        // }),
         divider(true) // vertical divider towards center stage
     ];
 
     container(content)
-        .width(200)
+        .width(300)
         .height(Length::Fill)
         .style(|theme: &iced::Theme| {
             let palette = theme.extended_palette();
@@ -67,7 +78,7 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
                     0,
                 );
 
-                column![tree, divider(false)].into()
+                column![tree, divider(false)].padding([5, 5]).into()
             })
             .collect();
 
@@ -85,7 +96,7 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
             .align_y(Center),
             divider(false)
         ]
-        .width(Length::Fill)
+        .width(Length::Shrink)
         .height(Length::Fill);
 
         // Push each directory element individually
@@ -150,23 +161,33 @@ fn build_folder_tree(
 
     // --- Selectable row body ---
     let row_content = row![
-        Space::new().width(Length::Fixed(indent as f32)),
-        expand_button,
-        container(text(label).size(14).wrapping(text::Wrapping::None)).clip(true),
-        Space::new().width(Length::Fill),
-        text(image_count.to_string()).size(14),
+        expand_button, // 24px
+        container(text(label).size(14).wrapping(text::Wrapping::None))
+            .clip(true)
+            .width(Length::Fill), // 64px
+        // Space::new().width(10), // 10px
+        text(image_count.to_string())
+            .size(14)
+            .align_x(Right)
+            .width(24), // 24px
     ]
     .spacing(8)
     .height(Length::Fill)
+    .width(200)
     .align_y(Center);
 
+    let row = row![
+        Space::new().width(Length::Fixed(indent as f32)),
+        row_content
+    ];
+
     // Make the entire row (except icon button) selectable
-    let selectable_row = button(row_content)
+    let selectable_row = button(row)
         .height(32) // your desired row height
-        .width(Length::Fill)
         .padding([0, 8]) // remove default button padding
         .on_press(Message::SelectDirectory(path.clone()))
         .style(folder_row_style(is_selected));
+    // .width(Length::Shrink);
 
     col = col.push(selectable_row);
 
@@ -190,7 +211,9 @@ fn build_folder_tree(
         }
     }
 
-    col.into()
+    Scrollable::new(col)
+        .direction(Direction::Horizontal(Scrollbar::new()))
+        .into()
 }
 
 fn folder_row_style(
