@@ -6,6 +6,7 @@ use iced::border::Radius;
 use iced::widget::{Space, button, column, container, row, svg, text};
 use iced::{Element, Length};
 
+use iced::widget::Scrollable;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
@@ -19,17 +20,21 @@ pub enum LeftSidebarMode {
 
 pub fn sidebar_left(state: &App) -> Element<'_, Message> {
     let content = row![
-        container(match state.left_sidebar_mode {
-            LeftSidebarMode::Navigator => navigator_view(state),
-            LeftSidebarMode::Collections => collections_view(state),
-            LeftSidebarMode::Hidden => text("Hidden").into(),
-        })
+        Scrollable::new(
+            container(match state.left_sidebar_mode {
+                LeftSidebarMode::Navigator => navigator_view(state),
+                LeftSidebarMode::Collections => collections_view(state),
+                LeftSidebarMode::Hidden => text("Hidden").into(),
+            })
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(10)
+            .align_x(Center)
+            .align_y(Center)
+        )
         .width(Length::Fill)
-        .height(Length::Fill)
-        .padding(10)
-        .align_x(Center)
-        .align_y(Center),
-        divider(true)
+        .height(Length::Fill),
+        divider(true) // vertical divider towards center stage
     ];
 
     container(content)
@@ -147,7 +152,7 @@ fn build_folder_tree(
     let row_content = row![
         Space::new().width(Length::Fixed(indent as f32)),
         expand_button,
-        text(label).size(14),
+        container(text(label).size(14).wrapping(text::Wrapping::None)).clip(true),
         Space::new().width(Length::Fill),
         text(image_count.to_string()).size(14),
     ]

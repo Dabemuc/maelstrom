@@ -252,6 +252,8 @@ impl App {
                         self.navigator_state.selected = Some(path)
                     }
                 }
+                
+                println!("Selected: {:?}", self.navigator_state.selected);
 
                 Task::none()
             }
