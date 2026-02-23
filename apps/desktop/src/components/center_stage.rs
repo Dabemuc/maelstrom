@@ -28,7 +28,7 @@ fn no_catalog_view() -> Element<'static, Message> {
         Space::new().width(Length::Fill).height(Length::Fill),
         row![
             Space::new().width(Length::FillPortion(1)),
-            text("Get started by Creating or Importing a Catalog")
+            text("Get started by Creating or Selecting an existing Catalog")
                 .size(25)
                 .width(Length::FillPortion(2))
                 .align_x(Horizontal::Center),
@@ -39,8 +39,8 @@ fn no_catalog_view() -> Element<'static, Message> {
                 .on_press(Message::CreateCatalog)
                 .padding([12, 24])
                 .style(iced::widget::button::primary),
-            button(text("Import Catalog").size(16))
-                .on_press(Message::ImportCatalog)
+            button(text("Select Catalog").size(16))
+                .on_press(Message::SelectCatalog)
                 .padding([12, 24])
                 .style(iced::widget::button::primary),
         ]

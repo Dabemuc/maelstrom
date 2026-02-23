@@ -6,7 +6,9 @@
       - [ ] Nodegraph (if exists)
       - [ ] preview file location
     - [ ] settings
-  - [ ] Maelstrom needs an active catalog -> On startup if no catalog found in default location make the user create one or import existing one to default location before 'allowing access' to the app. For now default location should just be here inside this repo.
+  - [ ] Maelstrom needs an active catalog -> On startup if no catalog found in default location make the user create one or import existing one
+    - [x] no_catalog_view 
+    - [ ] actually handle button clicks by openeing finder
 - [ ] Navigator shows all imported directories from catalog and lets user set Working directory by clicking
 - [ ] Working directory
 - [ ] Library view

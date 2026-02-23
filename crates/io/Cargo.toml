@@ -9,3 +9,4 @@ maelstrom_core = { path = "../core", package = "core"}
 image = "0.25.9"
 turso = "0.4.4"
 tokio = { version = "1.0", features = ["full"] }
+thiserror = "2.0.18"

@@ -1,5 +1,5 @@
 use iced::widget::{Row, column};
-use iced::{Element, Length};
+use iced::{Element, Length, Task};
 
 mod components;
 use components::center_stage::center_stage;
@@ -8,6 +8,10 @@ use components::control_panel_top::control_panel_top;
 use components::divider::divider;
 use components::sidebar_left::{LeftSidebarMode, sidebar_left};
 use components::sidebar_right::{RightSidebarMode, sidebar_right};
+
+use io::catalog::catalog::Catalog;
+use io::catalog::catalog_error::CatalogError;
+use rfd::FileDialog;
 
 pub enum ViewMode {
     Library,
@@ -37,7 +41,8 @@ pub enum Message {
     LeftSidebarClicked(LeftSidebarMode),
     RightSidebarClicked(RightSidebarMode),
     CreateCatalog,
-    ImportCatalog,
+    SelectCatalog,
+    CatalogLoaded(Result<Catalog, CatalogError>),
 }
 
 impl App {
@@ -62,11 +67,21 @@ impl App {
                 }
             }
             Message::CreateCatalog => {
-                println!("Click create")
+                println!("Click create");
             }
-            Message::ImportCatalog => {
-                println!("Click import")
+            Message::SelectCatalog => {
+                println!("Click select");
+                if let Some(path) = FileDialog::new()
+                    .add_filter("Maelstrom Catalog File", &["mcat"])
+                    .pick_file()
+                {
+                    Task::perform(Catalog::load(path), Message::CatalogLoaded);
+                }
             }
+            Message::CatalogLoaded(result) => match result {
+                Ok(_) => println!("Loaded"),
+                Err(e) => eprintln!("Error: {}", e),
+            },
         }
     }
 
