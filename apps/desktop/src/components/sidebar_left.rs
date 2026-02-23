@@ -2,8 +2,12 @@ use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::{App, Message};
 use iced::Alignment::Center;
-use iced::widget::{Space, column, container, row, svg, text};
+use iced::widget::{Space, button, column, container, row, svg, text};
 use iced::{Element, Length};
+
+use std::collections::HashSet;
+use std::fs;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LeftSidebarMode {
@@ -49,16 +53,15 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
             .iter()
             .map(|path| {
                 // build file tree from path
-                // TODO
-                
-                let mut col = column![text(path.to_string_lossy()), divider(false)];
-                
-                // insert file tree into col
-                // TODO
-                
-                col = col.push(divider(false));
-                
-                col.into()
+                let tree = build_file_tree(path, &state.navigator_state.expanded, 0);
+
+                column![
+                    text(path.to_string_lossy()),
+                    divider(false),
+                    tree,
+                    divider(false)
+                ]
+                .into()
             })
             .collect();
 
@@ -88,6 +91,63 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
     } else {
         text("No Catalog").into()
     }
+}
+
+fn build_file_tree(
+    path: &PathBuf,
+    expanded: &HashSet<PathBuf>,
+    depth: usize,
+) -> Element<'static, Message> {
+    let indent = 20 * depth as u16;
+    let is_expanded = expanded.contains(path);
+
+    let mut col = column![];
+
+    // Safe file/folder name extraction
+    let label = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.to_string_lossy().to_string());
+
+    // --- Render current node ---
+    let node: Element<_> = if path.is_dir() {
+        let icon = if is_expanded { "▼" } else { "▶" };
+
+        row![
+            Space::new().width(Length::Fixed(indent as f32)),
+            button(text(format!("{} {}", icon, label)))
+                .on_press(Message::ToggleDirectory(path.clone()))
+        ]
+        .into()
+    } else {
+        row![
+            Space::new().width(Length::Fixed(indent as f32)),
+            text(label).size(14)
+        ]
+        .into()
+    };
+
+    col = col.push(node);
+
+    // --- Render children if expanded ---
+    if is_expanded && path.is_dir() {
+        if let Ok(read_dir) = fs::read_dir(path) {
+            let mut entries: Vec<_> = read_dir.flatten().collect();
+
+            // Sort: folders first, then files, alphabetically
+            entries.sort_by_key(|e| {
+                let p = e.path();
+                (!p.is_dir(), p)
+            });
+
+            for entry in entries {
+                let child_path = entry.path();
+                col = col.push(build_file_tree(&child_path, expanded, depth + 1));
+            }
+        }
+    }
+
+    col.into()
 }
 
 fn collections_view(state: &App) -> Element<'_, Message> {

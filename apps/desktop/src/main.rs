@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use iced::widget::{Row, column};
@@ -21,12 +22,18 @@ pub enum ViewMode {
     NoCatalog,
 }
 
+pub struct NavigatorState {
+    expanded: HashSet<PathBuf>,
+    _selected: Option<PathBuf>,
+}
+
 pub struct App {
     pub left_sidebar_mode: LeftSidebarMode,
     pub right_sidebar_mode: RightSidebarMode,
     pub view_mode: ViewMode,
     pub catalog: Option<Catalog>,
     pub imported_dirs: Vec<PathBuf>,
+    pub navigator_state: NavigatorState,
 }
 
 // init state
@@ -38,6 +45,10 @@ impl Default for App {
             view_mode: ViewMode::NoCatalog,
             catalog: None,
             imported_dirs: Vec::new(),
+            navigator_state: NavigatorState {
+                expanded: HashSet::new(),
+                _selected: None,
+            },
         }
     }
 }
@@ -54,6 +65,7 @@ pub enum Message {
     LoadImportedDirectories,
     ImportedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
     ErrorMessage(String),
+    ToggleDirectory(PathBuf),
 }
 
 impl App {
@@ -197,6 +209,14 @@ impl App {
             }
             Message::ErrorMessage(_msg) => {
                 // eventually show the message in a popup or smth
+                Task::none()
+            }
+            Message::ToggleDirectory(path) => {
+                if self.navigator_state.expanded.contains(&path) {
+                    self.navigator_state.expanded.remove(&path);
+                } else {
+                    self.navigator_state.expanded.insert(path);
+                }
                 Task::none()
             }
         }
