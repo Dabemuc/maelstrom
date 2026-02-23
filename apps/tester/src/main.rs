@@ -1,6 +1,6 @@
 use graph::graph::Graph;
 use graph::node::Backend;
-use io::png::{load_png, save_png};
+use io::image_files::png::{load_png, save_png};
 use maelstrom_core::color::color_space::ColorSpace;
 use ops::exposure::Exposure;
 

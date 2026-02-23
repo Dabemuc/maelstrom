@@ -2,10 +2,11 @@ use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::{App, Message};
 use iced::Alignment::Center;
+use iced::border::Radius;
 use iced::widget::{Space, button, column, container, row, svg, text};
 use iced::{Element, Length};
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
@@ -53,15 +54,15 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
             .iter()
             .map(|path| {
                 // build file tree from path
-                let tree = build_file_tree(path, &state.navigator_state.expanded, 0);
+                let tree = build_folder_tree(
+                    path,
+                    &state.navigator_state.expanded,
+                    &state.navigator_state.selected,
+                    &state.navigator_state.image_counts,
+                    0,
+                );
 
-                column![
-                    text(path.to_string_lossy()),
-                    divider(false),
-                    tree,
-                    divider(false)
-                ]
-                .into()
+                column![tree, divider(false)].into()
             })
             .collect();
 
@@ -93,61 +94,116 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
     }
 }
 
-fn build_file_tree(
+fn build_folder_tree(
     path: &PathBuf,
     expanded: &HashSet<PathBuf>,
+    selected: &Option<PathBuf>,
+    image_counts: &HashMap<PathBuf, u32>,
     depth: usize,
 ) -> Element<'static, Message> {
     let indent = 20 * depth as u16;
     let is_expanded = expanded.contains(path);
+    let is_selected = selected.as_ref() == Some(path);
 
     let mut col = column![];
 
-    // Safe file/folder name extraction
+    // Folder name
     let label = path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| path.to_string_lossy().to_string());
 
-    // --- Render current node ---
-    let node: Element<_> = if path.is_dir() {
-        let icon = if is_expanded { "▼" } else { "▶" };
+    let image_count = image_counts.get(path).copied().unwrap_or(0);
 
-        row![
-            Space::new().width(Length::Fixed(indent as f32)),
-            button(text(format!("{} {}", icon, label)))
-                .on_press(Message::ToggleDirectory(path.clone()))
-        ]
-        .into()
-    } else {
-        row![
-            Space::new().width(Length::Fixed(indent as f32)),
-            text(label).size(14)
-        ]
-        .into()
-    };
+    // --- Expand / Collapse Icon (only clickable area for toggling) ---
+    let icon = if is_expanded { "▼" } else { "▶" };
 
-    col = col.push(node);
+    let expand_button = button(
+        container(
+            text(icon)
+                .size(14)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .align_x(Center)
+                .align_y(Center),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill),
+    )
+    .width(24)
+    .height(24)
+    .padding(0)
+    .style(|theme: &iced::Theme, status: button::Status| {
+        let mut style = button::text(theme, status);
+        if status == button::Status::Hovered {
+            style.background = Some(iced::Color::from_rgba(0.0, 0.0, 0.0, 0.1).into());
+            style.border.radius = 4.0.into();
+        }
+        style
+    })
+    .on_press(Message::ToggleDirectory(path.clone()));
 
-    // --- Render children if expanded ---
-    if is_expanded && path.is_dir() {
+    // --- Selectable row body ---
+    let row_content = row![
+        Space::new().width(Length::Fixed(indent as f32)),
+        expand_button,
+        text(label).size(14),
+        Space::new().width(Length::Fill),
+        text(image_count.to_string()).size(14),
+    ]
+    .spacing(8)
+    .height(Length::Fill)
+    .align_y(Center);
+
+    // Make the entire row (except icon button) selectable
+    let selectable_row = button(row_content)
+        .height(32) // your desired row height
+        .width(Length::Fill)
+        .padding([0, 8]) // remove default button padding
+        .on_press(Message::SelectDirectory(path.clone()))
+        .style(folder_row_style(is_selected));
+
+    col = col.push(selectable_row);
+
+    // --- Render children folders only ---
+    if is_expanded {
         if let Ok(read_dir) = fs::read_dir(path) {
-            let mut entries: Vec<_> = read_dir.flatten().collect();
+            let mut entries: Vec<_> = read_dir.flatten().filter(|e| e.path().is_dir()).collect();
 
-            // Sort: folders first, then files, alphabetically
-            entries.sort_by_key(|e| {
-                let p = e.path();
-                (!p.is_dir(), p)
-            });
+            entries.sort_by_key(|e| e.path());
 
             for entry in entries {
                 let child_path = entry.path();
-                col = col.push(build_file_tree(&child_path, expanded, depth + 1));
+                col = col.push(build_folder_tree(
+                    &child_path,
+                    expanded,
+                    selected,
+                    image_counts,
+                    depth + 1,
+                ));
             }
         }
     }
 
     col.into()
+}
+
+fn folder_row_style(
+    is_selected: bool,
+) -> impl Fn(&iced::Theme, iced::widget::button::Status) -> iced::widget::button::Style {
+    move |theme, status| {
+        use iced::widget::button;
+
+        let mut style = button::text(theme, status);
+
+        if is_selected {
+            style.background = Some(theme.extended_palette().secondary.weak.color.into());
+            style.text_color = theme.palette().background;
+            style.border.radius = Radius::new(5);
+        }
+
+        style
+    }
 }
 
 fn collections_view(state: &App) -> Element<'_, Message> {

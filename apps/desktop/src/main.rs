@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use iced::widget::{Row, column};
@@ -14,6 +14,7 @@ use components::sidebar_right::{RightSidebarMode, sidebar_right};
 
 use io::catalog::catalog::Catalog;
 use io::catalog::catalog_error::CatalogError;
+use io::image_files::helpers::count_images_in_folder;
 use rfd::FileDialog;
 
 pub enum ViewMode {
@@ -24,7 +25,8 @@ pub enum ViewMode {
 
 pub struct NavigatorState {
     expanded: HashSet<PathBuf>,
-    _selected: Option<PathBuf>,
+    selected: Option<PathBuf>,
+    image_counts: HashMap<PathBuf, u32>,
 }
 
 pub struct App {
@@ -47,7 +49,8 @@ impl Default for App {
             imported_dirs: Vec::new(),
             navigator_state: NavigatorState {
                 expanded: HashSet::new(),
-                _selected: None,
+                selected: None,
+                image_counts: HashMap::new(),
             },
         }
     }
@@ -66,6 +69,8 @@ pub enum Message {
     ImportedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
     ErrorMessage(String),
     ToggleDirectory(PathBuf),
+    SelectDirectory(PathBuf),
+    ImageCountResult((PathBuf, u32)),
 }
 
 impl App {
@@ -196,16 +201,34 @@ impl App {
                 match result {
                     Ok(paths) => {
                         self.imported_dirs = paths.clone();
-                        println!("Successfully loaded imported directories into state")
+                        println!("Successfully loaded imported directories into state");
+
+                        // Start image counting
+                        let counting_tasks: Vec<Task<Message>> = paths
+                            .iter()
+                            .map(|path| {
+                                Task::perform(
+                                    {
+                                        let path = path.clone(); // copy or clone as needed
+                                        async move {
+                                            let count = count_images_in_folder(path.clone());
+                                            (path, count) // return a tuple of (PathBuf, u32)
+                                        }
+                                    },
+                                    Message::ImageCountResult, // this variant must accept (PathBuf, u32)
+                                )
+                            })
+                            .collect();
+                        Task::batch(counting_tasks)
                     }
                     Err(e) => {
                         println!(
                             "Error while Loading imported directories from catalog: {0:?}",
                             e
-                        )
+                        );
+                        Task::none()
                     }
                 }
-                Task::none()
             }
             Message::ErrorMessage(_msg) => {
                 // eventually show the message in a popup or smth
@@ -217,6 +240,24 @@ impl App {
                 } else {
                     self.navigator_state.expanded.insert(path);
                 }
+                Task::none()
+            }
+            Message::SelectDirectory(path) => {
+                if self.navigator_state.selected.is_none() {
+                    self.navigator_state.selected = Some(path);
+                } else {
+                    if self.navigator_state.selected.as_ref().unwrap() == &path {
+                        self.navigator_state.selected = None;
+                    } else {
+                        self.navigator_state.selected = Some(path)
+                    }
+                }
+
+                Task::none()
+            }
+            Message::ImageCountResult((path, count)) => {
+                self.navigator_state.image_counts.insert(path, count);
+
                 Task::none()
             }
         }
