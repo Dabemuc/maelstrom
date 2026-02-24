@@ -32,6 +32,11 @@ pub fn load_png(path: &str, space: ColorSpace) -> Result<LinearImage, Box<dyn st
     Ok(output)
 }
 
+pub fn load_png_colorspace(_path: &str) -> ColorSpace {
+    // For now we just assume png is always sRGB
+    ColorSpace::Srgb
+}
+
 pub fn save_png(
     img: &LinearImage,
     path: &str,

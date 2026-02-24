@@ -8,5 +8,5 @@ members = [
     "crates/graph",
     "crates/ops",
     "crates/io"
-, "apps/cli"]
+, "apps/cli", "crates/previews"]
 resolver = "2"

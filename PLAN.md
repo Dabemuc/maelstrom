@@ -6,13 +6,14 @@
       - [ ] Nodegraph (if exists)
       - [ ] preview file location
     - [ ] settings
-  - [ ] Maelstrom needs an active catalog -> On startup if no catalog found in default location make the user create one or import existing one
+  - [x] Maelstrom needs an active catalog -> On startup if no catalog found in default location make the user create one or import existing one
     - [x] no_catalog_view 
-    - [ ] actually handle button clicks by openeing finder
-- [ ] Navigator shows all imported directories from catalog and lets user set Working directory by clicking
-- [ ] Working directory
+    - [x] default catalog location and loading on startup
+  - [ ] catalog dropdown in top left to access load/create/any future functionality
+- [x] Navigator shows all imported directories from catalog and lets user set Working directory by clicking
+- [x] Working directory
 - [ ] Library view
-  - [ ] Show only fotos from current working directory in library view
+  - [ ] Generate and cache or load fotos from current working directory and show them in library view
   - [ ] User can switch to Develop view by double clicking foto
 - [ ] Develop view
   - [ ] Interactions modify node graph -> Rerendering of developed foto and its preview

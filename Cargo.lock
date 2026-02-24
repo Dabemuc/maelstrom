@@ -3527,6 +3527,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "previews"
+version = "0.1.0"
+dependencies = [
+ "core",
+ "graph",
+ "image 0.1.0",
+ "io",
+ "ops",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

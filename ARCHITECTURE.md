@@ -1,6 +1,6 @@
 # Note
 
-This was ai genereted to get a starting point for the project.
+This was ai genereted to get a starting point for the project and is already outdated.
 
 Below is a concrete, production-oriented crate layout for a Rust-based Lightroom-style application. The design assumes:
 

@@ -1,0 +1,11 @@
+[package]
+name = "previews"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+maelstrom_image = { path = "../image", package = "image" }
+maelstrom_core = { path = "../core", package = "core"}
+ops = { path = "../ops" }
+io = { path = "../io" }
+graph = { path = "../graph" }

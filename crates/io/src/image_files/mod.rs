@@ -1,3 +1,3 @@
 pub mod helpers;
-pub mod png;
+mod png;
 pub mod supported_image_file_types;
