@@ -79,7 +79,7 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
                 )
                 .on_press(Message::ImportDirectory)
             ]
-            .align_y(Center),
+            .align_y(Center).width(300),
             divider(false)
         ]
         .width(Length::Shrink)

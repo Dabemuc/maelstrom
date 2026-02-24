@@ -107,10 +107,7 @@ impl App {
             }
             Message::SelectCatalog => {
                 println!("Click select");
-                if let Some(path) = FileDialog::new()
-                    .add_filter("Maelstrom Catalog File", &["mcat"])
-                    .pick_file()
-                {
+                if let Some(path) = FileDialog::new().pick_folder() {
                     return Task::perform(Catalog::load(path), Message::CatalogLoadAttempted);
                 } else {
                     println!("FileDialog canceled");

@@ -17,6 +17,15 @@ pub enum CatalogError {
 
     #[error("Catalog already exists at {0:?}")]
     AlreadyExists(PathBuf),
+
+    #[error("Catalog folder does not contain catalog file at {0:?}")]
+    MissingCatalogFile(PathBuf),
+
+    #[error("Catalog folder does not contain cache folder at {0:?}")]
+    MissingCacheDirectory(PathBuf),
+
+    #[error("Filesystem error concerning catalog: {0:?}")]
+    FileSystem(String),
 }
 
 // Convert boxed dynamic errors

@@ -1,23 +1,48 @@
 use super::turso::TursoDB;
 use crate::catalog::catalog_error::CatalogError;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 const CATALOG_VERSION: u16 = 1;
+const CATALOG_FILE_NAME: &str = "catalog.mcat";
+const CACHE_DIR_NAME: &str = "cache";
 
 #[derive(Clone)]
 pub struct Catalog {
     db: Arc<TursoDB>,
+    root: PathBuf,
+    cache_dir: PathBuf,
 }
 
 impl Catalog {
-    /// Opens an existing catalog. Fails if the file does not exist or if the version does not match.
-    pub async fn load(path: impl AsRef<Path>) -> Result<Self, CatalogError> {
-        let path_ref = path.as_ref();
+    /// Opens an existing catalog directory.
+    /// Verifies:
+    /// - directory exists
+    /// - catalog.mcat exists
+    /// - cache/ exists
+    /// - version matches
+    pub async fn load(folder: impl AsRef<Path>) -> Result<Self, CatalogError> {
+        let folder_ref = folder.as_ref();
 
-        let path_str = path_ref
+        if !folder_ref.is_dir() {
+            return Err(CatalogError::InvalidPathEncoding(folder_ref.to_path_buf()));
+        }
+
+        let catalog_path = folder_ref.join(CATALOG_FILE_NAME);
+        let cache_dir = folder_ref.join(CACHE_DIR_NAME);
+
+        if !catalog_path.is_file() {
+            return Err(CatalogError::MissingCatalogFile(catalog_path));
+        }
+
+        if !cache_dir.is_dir() {
+            return Err(CatalogError::MissingCacheDirectory(cache_dir));
+        }
+
+        let path_str = catalog_path
             .to_str()
-            .ok_or_else(|| CatalogError::InvalidPathEncoding(path_ref.to_path_buf()))?;
+            .ok_or_else(|| CatalogError::InvalidPathEncoding(catalog_path.clone()))?;
 
         let db = TursoDB::open(path_str)
             .await
@@ -29,7 +54,11 @@ impl Catalog {
             .map_err(|e| CatalogError::Database(e.to_string()))?;
 
         match version {
-            Some(v) if v == CATALOG_VERSION => Ok(Self { db: Arc::new(db) }),
+            Some(v) if v == CATALOG_VERSION => Ok(Self {
+                db: Arc::new(db),
+                root: folder_ref.to_path_buf(),
+                cache_dir,
+            }),
             Some(v) => Err(CatalogError::VersionMismatch {
                 expected: CATALOG_VERSION,
                 found: v,
@@ -38,38 +67,59 @@ impl Catalog {
         }
     }
 
-    /// Creates a new catalog, initializes the schema and sets the version.
-    pub async fn create(folder: impl AsRef<Path>) -> Result<Self, CatalogError> {
-        let folder_ref = folder.as_ref();
+    /// Creates a new catalog directory structure:
+    ///
+    /// <base>/maelstrom_catalog/
+    ///   catalog.mcat
+    ///   cache/
+    pub async fn create(base_folder: impl AsRef<Path>) -> Result<Self, CatalogError> {
+        let base_ref = base_folder.as_ref();
 
-        // Ensure folder exists and is directory
-        if !folder_ref.is_dir() {
-            return Err(CatalogError::InvalidPathEncoding(folder_ref.to_path_buf()));
+        if !base_ref.is_dir() {
+            return Err(CatalogError::InvalidPathEncoding(base_ref.to_path_buf()));
         }
 
-        // Build full file path: <folder>/catalog.mcat
-        let catalog_path: PathBuf = folder_ref.join("catalog.mcat");
+        // Create catalog folder inside selected base folder
+        let root = base_ref.join("maelstrom_catalog");
 
-        // Fail if already exists
-        if catalog_path.exists() {
-            return Err(CatalogError::AlreadyExists(catalog_path));
+        if root.exists() {
+            return Err(CatalogError::AlreadyExists(root));
         }
+
+        // Create catalog root directory
+        fs::create_dir(&root).map_err(|e| CatalogError::FileSystem(e.to_string()))?;
+
+        let catalog_path = root.join(CATALOG_FILE_NAME);
+        let cache_dir = root.join(CACHE_DIR_NAME);
+
+        // Create cache directory
+        fs::create_dir(&cache_dir).map_err(|e| CatalogError::FileSystem(e.to_string()))?;
 
         let path_str = catalog_path
             .to_str()
             .ok_or_else(|| CatalogError::InvalidPathEncoding(catalog_path.clone()))?;
 
-        // Create database file
         let db = TursoDB::create(path_str)
             .await
             .map_err(|e| CatalogError::Database(e.to_string()))?;
 
-        // Set version immediately (new DB should not have one)
         db.set_version(CATALOG_VERSION)
             .await
             .map_err(|e| CatalogError::Database(e.to_string()))?;
 
-        Ok(Self { db: Arc::new(db) })
+        Ok(Self {
+            db: Arc::new(db),
+            root,
+            cache_dir,
+        })
+    }
+
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    pub fn cache_dir(&self) -> &Path {
+        &self.cache_dir
     }
 
     /// Imports a directory path into the catalog.
@@ -93,7 +143,6 @@ impl Catalog {
     /// Prints catalog metadata: version and imported directories.
     /// Returns an error if the database cannot be accessed.
     pub async fn print_metadata(&self) -> Result<(), CatalogError> {
-        // Get version
         let version = self
             .db
             .get_version()
@@ -101,9 +150,9 @@ impl Catalog {
             .map_err(|e| CatalogError::Database(e.to_string()))?
             .ok_or(CatalogError::MissingVersion)?;
 
-        // Get imported directories
         let dirs = self.get_imported_directories().await?;
 
+        println!("Catalog root: {:?}", self.root);
         println!("Catalog version: {}", version);
         println!("Imported directories:");
         for dir in dirs {
@@ -116,6 +165,9 @@ impl Catalog {
 
 impl std::fmt::Debug for Catalog {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Catalog").finish()
+        f.debug_struct("Catalog")
+            .field("root", &self.root)
+            .field("cache_dir", &self.cache_dir)
+            .finish()
     }
 }
