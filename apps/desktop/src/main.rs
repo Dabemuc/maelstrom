@@ -64,6 +64,7 @@ pub enum Message {
     SelectCatalog,
     CatalogLoadAttempted(Result<Catalog, CatalogError>),
     CatalogLoaded,
+    NavigatorCollapseAll,
     ImportDirectory,
     LoadImportedDirectories,
     ImportedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
@@ -144,6 +145,11 @@ impl App {
                 let load_dirs_task = Task::perform(async {}, |_| Message::LoadImportedDirectories);
 
                 load_dirs_task.chain(Task::none())
+            }
+            Message::NavigatorCollapseAll => {
+                self.navigator_state.expanded.clear();
+
+                Task::none()
             }
             Message::ImportDirectory => {
                 println!("Click import");

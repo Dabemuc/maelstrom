@@ -71,15 +71,28 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
         // Start column with header row and divider
         let mut col = column![
             row![
+                container(text("Imported Folders").width(Length::Shrink))
+                    .padding(10)
+                    .align_y(Center)
+                    .clip(true),
                 Space::new().width(Length::Fill),
-                icon_button(
-                    svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
-                    "Import new folder",
-                    false
-                )
-                .on_press(Message::ImportDirectory)
+                row![
+                    icon_button(
+                        svg::Handle::from_memory(include_bytes!("../../assets/icons/collapse.svg")),
+                        "Collapse all",
+                        false
+                    )
+                    .on_press(Message::NavigatorCollapseAll),
+                    icon_button(
+                        svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
+                        "Import new folder",
+                        false
+                    )
+                    .on_press(Message::ImportDirectory)
+                ]
             ]
-            .align_y(Center).width(300),
+            .align_y(Center)
+            .width(300),
             divider(false)
         ]
         .width(Length::Shrink)
