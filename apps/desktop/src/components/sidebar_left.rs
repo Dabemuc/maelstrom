@@ -22,29 +22,15 @@ pub enum LeftSidebarMode {
 
 pub fn sidebar_left(state: &App) -> Element<'_, Message> {
     let content = row![
-        Scrollable::new(
-            container(match state.left_sidebar_mode {
-                LeftSidebarMode::Navigator => navigator_view(state),
-                LeftSidebarMode::Collections => collections_view(state),
-                LeftSidebarMode::Hidden => text("Hidden").into(),
-            })
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_x(Center)
-            .align_y(Center)
-        )
+        container(match state.left_sidebar_mode {
+            LeftSidebarMode::Navigator => navigator_view(state),
+            LeftSidebarMode::Collections => collections_view(state),
+            LeftSidebarMode::Hidden => text("Hidden").into(),
+        })
         .width(Length::Fill)
-        .height(Length::Fill),
-        // .direction(Direction::Horizontal(Scrollbar::new()))
-        // .direction(Direction::Both {
-        //     vertical: Scrollbar::new(),
-        //     horizontal: Scrollbar::new()
-        // }),
-        // .style(|theme: &iced::Theme, status| {
-        //     let mut style = scrollable::default(theme, status);
-        //     style.container.background = Some(Background::Color(Color::WHITE));
-        //     style
-        // }),
+        .height(Length::Fill)
+        .align_x(Center)
+        .align_y(Center),
         divider(true) // vertical divider towards center stage
     ];
 
@@ -100,9 +86,12 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
         .height(Length::Fill);
 
         // Push each directory element individually
+        let mut tree_col = column![];
         for elem in dir_elements {
-            col = col.push(elem);
+            tree_col = tree_col.push(elem);
         }
+
+        col = col.push(Scrollable::new(tree_col));
 
         col.into()
     } else {
@@ -173,12 +162,13 @@ fn build_folder_tree(
     ]
     .spacing(8)
     .height(Length::Fill)
-    .width(200)
+    .width(235)
     .align_y(Center);
 
     let row = row![
         Space::new().width(Length::Fixed(indent as f32)),
-        row_content
+        row_content,
+        Space::new().width(15),
     ];
 
     // Make the entire row (except icon button) selectable
@@ -209,6 +199,10 @@ fn build_folder_tree(
                 ));
             }
         }
+    }
+
+    if depth == 0 {
+        col = col.push(Space::new().height(10));
     }
 
     Scrollable::new(col)
