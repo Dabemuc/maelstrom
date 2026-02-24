@@ -12,7 +12,7 @@ use components::divider::divider;
 use components::sidebar_left::{LeftSidebarMode, sidebar_left};
 use components::sidebar_right::{RightSidebarMode, sidebar_right};
 
-use io::catalog::catalog::Catalog;
+use io::catalog::catalog::{CATALOG_FILE_NAME, CATALOG_FOLDER_NAME, Catalog};
 use io::catalog::catalog_error::CatalogError;
 use io::image_files::helpers::count_images_in_folder;
 use rfd::FileDialog;
@@ -39,9 +39,10 @@ pub struct App {
 }
 
 // init state
-impl Default for App {
-    fn default() -> Self {
-        Self {
+impl App {
+    pub fn new() -> (Self, Task<Message>) {
+        // 1. Initialize default state
+        let app = Self {
             left_sidebar_mode: LeftSidebarMode::Navigator,
             right_sidebar_mode: RightSidebarMode::Hidden,
             view_mode: ViewMode::NoCatalog,
@@ -52,7 +53,37 @@ impl Default for App {
                 selected: None,
                 image_counts: HashMap::new(),
             },
+        };
+
+        // 2. Determine base config directory
+        let config_base = dirs::config_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("maelstrom");
+
+        // Ensure the base directory exists
+        if !config_base.exists() {
+            println!("User config dir doesnt exists at {:?}", config_base);
+            return (app, Task::none());
         }
+
+        // 3. Compute the catalog root folder
+        let catalog_root = config_base.join(CATALOG_FOLDER_NAME);
+
+        // 4. Prepare the startup task
+        let startup_task = if catalog_root.join(CATALOG_FILE_NAME).exists() {
+            Task::perform(
+                Catalog::load(catalog_root.clone()),
+                Message::CatalogLoadAttempted,
+            )
+        } else {
+            println!("default catalog not found, creating at: {:?}", catalog_root);
+            Task::perform(
+                Catalog::create(config_base.clone()),
+                Message::CatalogLoadAttempted,
+            )
+        };
+
+        (app, startup_task)
     }
 }
 
@@ -330,7 +361,7 @@ fn main() -> iced::Result {
     };
 
     // 2. Launch the application
-    iced::application(App::default, App::update, App::view)
+    iced::application(App::new, App::update, App::view)
         .theme(App::theme)
         .title("Maelstrom")
         .window(window_settings)

@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 const CATALOG_VERSION: u16 = 1;
-const CATALOG_FILE_NAME: &str = "catalog.mcat";
+pub const CATALOG_FILE_NAME: &str = "catalog.mcat";
+pub const CATALOG_FOLDER_NAME: &str = "maelstrom_catalog";
 const CACHE_DIR_NAME: &str = "cache";
 
 #[derive(Clone)]
@@ -80,7 +81,7 @@ impl Catalog {
         }
 
         // Create catalog folder inside selected base folder
-        let root = base_ref.join("maelstrom_catalog");
+        let root = base_ref.join(CATALOG_FOLDER_NAME);
 
         if root.exists() {
             return Err(CatalogError::AlreadyExists(root));
