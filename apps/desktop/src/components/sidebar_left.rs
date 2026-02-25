@@ -116,7 +116,7 @@ fn build_folder_tree(
     path: &PathBuf,
     expanded: &HashSet<PathBuf>,
     selected: &Option<PathBuf>,
-    image_counts: &HashMap<PathBuf, u32>,
+    image_counts: &HashMap<PathBuf, usize>,
     depth: usize,
 ) -> Element<'static, Message> {
     let indent = 20 * depth as u16;

@@ -3,9 +3,10 @@ use iced::alignment::Horizontal;
 use iced::widget::{Space, button, column, container, row, text};
 use iced::{Alignment, Element, Length};
 
-pub fn center_stage(_state: &App) -> Element<'_, Message> {
-    let content = match _state.view_mode {
+pub fn center_stage(state: &App) -> Element<'_, Message> {
+    let content = match state.view_mode {
         ViewMode::NoCatalog => no_catalog_view(),
+        ViewMode::Library => library_view(state),
         _ => Space::new().width(Length::Fill).height(Length::Fill).into(),
     };
 
@@ -52,4 +53,14 @@ fn no_catalog_view() -> Element<'static, Message> {
     .align_x(Alignment::Center)
     .spacing(40)
     .into()
+}
+
+fn library_view(state: &App) -> Element<'_, Message> {
+    let mut col = column![];
+
+    for pv in state.workspace_state.previews.clone() {
+        col = col.push(text(pv.hash));
+    }
+
+    col.into()
 }

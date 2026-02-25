@@ -1,11 +1,18 @@
 use std::path::PathBuf;
 
 use graph::{graph::Graph, node::Backend};
-use io::image_files::supported_image_file_types::SupportedFileTypes;
-use maelstrom_core::color::color_space::ColorSpace;
+use io::{
+    catalog::catalog::{CACHE_DIR_NAME, Catalog},
+    image_files::supported_image_file_types::SupportedFileTypes,
+};
+use maelstrom_core::{color::color_space::ColorSpace, hash::hash_file};
 use ops::exposure::Exposure;
 
-pub fn generate_preview_for_image(path_to_img: PathBuf) {
+pub async fn generate_preview_for_image(
+    path_to_img: PathBuf,
+    catalog: &Catalog,
+    overwrite_if_exists: bool,
+) {
     // 1. get file name
     let filename = path_to_filename(path_to_img.clone());
 
@@ -18,10 +25,38 @@ pub fn generate_preview_for_image(path_to_img: PathBuf) {
         return;
     }
 
-    // 3. Get type of image
     let image_file_type = SupportedFileTypes::from_filename(&filename).unwrap();
 
-    // 4. Load image
+    // 3. Hash image content
+    let content_hash = match hash_file(&path_to_img) {
+        Ok(h) => h,
+        Err(e) => {
+            eprintln!(
+                "Preview generation failed. Error hashing image {:?}: {}",
+                path_to_img, e
+            );
+            return;
+        }
+    };
+
+    // 4. Check catalog
+    let exists = match catalog.image_exists(&content_hash).await {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Preview generation failed. Catalog check failed: {}", e);
+            return;
+        }
+    };
+
+    if exists && !overwrite_if_exists {
+        println!(
+            "Preview generation skipped. Preview already exists for {:?}",
+            path_to_img
+        );
+        return;
+    }
+
+    // 5. Load image
     let image_linear = image_file_type
         .load(
             path_to_img.to_str().unwrap(),
@@ -29,37 +64,38 @@ pub fn generate_preview_for_image(path_to_img: PathBuf) {
         )
         .unwrap();
 
-    // 5. Define preview generation graph
+    // 6. Define preview generation graph
     let mut graph = Graph::new();
     // Temporary exposure node. should be downsample and compress
     graph.add_node(Exposure { ev: 3.0 });
 
-    // 6. Generate preview
+    // 7. Generate preview
     let result = graph.execute(image_linear, Backend::Cpu);
     println!(
         "Generated preview for {:?} with resolution: {}x{}",
         path_to_img, result.width, result.height
     );
 
-    // 7. Save preview
-    let preview_file_destination = "";
-    image_file_type
-        .save(
-            &result,
-            concat!(env!("CARGO_MANIFEST_DIR"), "/output.png"),
-            ColorSpace::Srgb,
-        )
-        .unwrap_or_else(|e| {
-            eprintln!(
-                "Error saving preview for {:?} at {}: {}",
-                path_to_img, preview_file_destination, e
-            );
-            return;
-        });
-    println!(
-        "Successfully saved preview for {:?} at {}",
-        path_to_img, preview_file_destination
-    );
+    // 8. Save preview using hash as filename
+    let preview_path_buf = catalog
+        .root()
+        .join(CACHE_DIR_NAME)
+        .join(format!("{}.png", content_hash));
+    let preview_path = preview_path_buf.to_str().unwrap();
+    if let Err(e) = image_file_type.save(&result, &preview_path, ColorSpace::Srgb) {
+        eprintln!("Error saving preview for {:?}: {}", path_to_img, e);
+        return;
+    }
+
+    // 9. Insert image into DB (if new)
+    if !exists {
+        if let Err(e) = catalog
+            .add_image(&content_hash, path_to_img.to_str().unwrap())
+            .await
+        {
+            eprintln!("Failed to insert image hash into catalog: {}", e);
+        }
+    }
 }
 
 fn path_to_filename(path: PathBuf) -> String {

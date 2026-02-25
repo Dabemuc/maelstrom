@@ -14,7 +14,8 @@ use components::sidebar_right::{RightSidebarMode, sidebar_right};
 
 use io::catalog::catalog::{CATALOG_FILE_NAME, CATALOG_FOLDER_NAME, Catalog};
 use io::catalog::catalog_error::CatalogError;
-use io::image_files::helpers::count_images_in_folder;
+use io::image_files::helpers::collect_images_in_folder;
+use previews::preview_generation::generate_preview_for_image;
 use rfd::FileDialog;
 
 pub enum ViewMode {
@@ -26,7 +27,18 @@ pub enum ViewMode {
 pub struct NavigatorState {
     expanded: HashSet<PathBuf>,
     selected: Option<PathBuf>,
-    image_counts: HashMap<PathBuf, u32>,
+    image_counts: HashMap<PathBuf, usize>,
+}
+
+pub struct WorkspaceState {
+    previews: Vec<Preview>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Preview {
+    // path: PathBuf,
+    // original_path: PathBuf,
+    hash: String,
 }
 
 pub struct App {
@@ -36,6 +48,7 @@ pub struct App {
     pub catalog: Option<Catalog>,
     pub imported_dirs: Vec<PathBuf>,
     pub navigator_state: NavigatorState,
+    pub workspace_state: WorkspaceState,
 }
 
 // init state
@@ -52,6 +65,9 @@ impl App {
                 expanded: HashSet::new(),
                 selected: None,
                 image_counts: HashMap::new(),
+            },
+            workspace_state: WorkspaceState {
+                previews: Vec::new(),
             },
         };
 
@@ -102,7 +118,9 @@ pub enum Message {
     ErrorMessage(String),
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
-    ImageCountResult((PathBuf, u32)),
+    ImageCountResult((PathBuf, usize)),
+    PreviewsGenerated(PathBuf),
+    PreviewsLoaded(Vec<Preview>),
 }
 
 impl App {
@@ -245,11 +263,12 @@ impl App {
                                     {
                                         let path = path.clone(); // copy or clone as needed
                                         async move {
-                                            let count = count_images_in_folder(path.clone());
-                                            (path, count) // return a tuple of (PathBuf, u32)
+                                            let count =
+                                                collect_images_in_folder(path.clone()).len();
+                                            (path, count) // return a tuple of (PathBuf, usize)
                                         }
                                     },
-                                    Message::ImageCountResult, // this variant must accept (PathBuf, u32)
+                                    Message::ImageCountResult, // this variant must accept (PathBuf, usize)
                                 )
                             })
                             .collect();
@@ -278,17 +297,58 @@ impl App {
             }
             Message::SelectDirectory(path) => {
                 if self.navigator_state.selected.is_none() {
-                    self.navigator_state.selected = Some(path);
+                    self.navigator_state.selected = Some(path.clone());
                 } else {
                     if self.navigator_state.selected.as_ref().unwrap() == &path {
                         self.navigator_state.selected = None;
                     } else {
-                        self.navigator_state.selected = Some(path)
+                        self.navigator_state.selected = Some(path.clone())
                     }
                 }
 
                 println!("Selected: {:?}", self.navigator_state.selected);
 
+                // For now schedule one task that generates all previews of working directory at once.
+                // Later this should be batched
+                if let Some(catalog) = &self.catalog {
+                    let catalog_clone = catalog.clone();
+                    Task::perform(
+                        async move {
+                            let images = collect_images_in_folder(path.clone());
+
+                            for p in images {
+                                generate_preview_for_image(p, &catalog_clone, false).await;
+                            }
+
+                            path
+                        },
+                        Message::PreviewsGenerated,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+            Message::PreviewsGenerated(path) => {
+                if let Some(catalog) = &self.catalog {
+                    let catalog_clone = catalog.clone();
+                    Task::perform(
+                        async move {
+                            let hashes = catalog_clone
+                                .get_all_hashes_for_path(path.clone())
+                                .await
+                                .unwrap();
+
+                            hashes.into_iter().map(|h| Preview { hash: h }).collect()
+                        },
+                        Message::PreviewsLoaded,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+            Message::PreviewsLoaded(previews) => {
+                println!("Loaded {} previews into state", previews.len());
+                self.workspace_state.previews = previews;
                 Task::none()
             }
             Message::ImageCountResult((path, count)) => {

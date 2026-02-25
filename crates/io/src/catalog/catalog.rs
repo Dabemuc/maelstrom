@@ -7,7 +7,7 @@ use std::sync::Arc;
 const CATALOG_VERSION: u16 = 1;
 pub const CATALOG_FILE_NAME: &str = "catalog.mcat";
 pub const CATALOG_FOLDER_NAME: &str = "maelstrom_catalog";
-const CACHE_DIR_NAME: &str = "cache";
+pub const CACHE_DIR_NAME: &str = "cache";
 
 #[derive(Clone)]
 pub struct Catalog {
@@ -139,6 +139,40 @@ impl Catalog {
     pub async fn get_imported_directories(&self) -> Result<Vec<PathBuf>, CatalogError> {
         let paths = self.db.get_imported_paths().await?;
         Ok(paths.into_iter().map(PathBuf::from).collect())
+    }
+
+    pub async fn image_exists(&self, content_hash: &str) -> Result<bool, CatalogError> {
+        let res = self.db.image_exists(content_hash).await?;
+        Ok(res)
+    }
+
+    pub async fn add_image(
+        &self,
+        content_hash: &str,
+        path: impl AsRef<Path>,
+    ) -> Result<(), CatalogError> {
+        let path_ref = path.as_ref();
+
+        let path_str = path_ref
+            .to_str()
+            .ok_or_else(|| CatalogError::InvalidPathEncoding(path_ref.to_path_buf()))?;
+
+        self.db.add_image(content_hash, path_str).await?;
+        Ok(())
+    }
+
+    pub async fn get_all_hashes_for_path(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<Vec<String>, CatalogError> {
+        let path_ref = path.as_ref();
+
+        let path_str = path_ref
+            .to_str()
+            .ok_or_else(|| CatalogError::InvalidPathEncoding(path_ref.to_path_buf()))?;
+
+        let hashes = self.db.get_image_hashes_by_path(path_str).await?;
+        Ok(hashes)
     }
 
     /// Prints catalog metadata: version and imported directories.

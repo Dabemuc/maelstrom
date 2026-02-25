@@ -40,7 +40,60 @@ impl TursoDB {
         )
         .await?;
 
+        conn.execute(
+            r#"CREATE TABLE IF NOT EXISTS images (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    content_hash TEXT NOT NULL UNIQUE,
+                    path TEXT NOT NULL
+                )"#,
+            (),
+        )
+        .await?;
+
         Ok(Self { conn })
+    }
+
+    /// Inserts an image hash (ignored if already exists).
+    pub async fn add_image(&self, content_hash: &str, path: &str) -> turso::Result<()> {
+        self.conn
+            .execute(
+                "INSERT OR IGNORE INTO images (content_hash, path) VALUES (?1, ?2)",
+                [content_hash, path],
+            )
+            .await?;
+        Ok(())
+    }
+
+    /// Checks whether an image with this hash already exists.
+    pub async fn image_exists(&self, content_hash: &str) -> turso::Result<bool> {
+        let mut rows = self
+            .conn
+            .query(
+                "SELECT 1 FROM images WHERE content_hash = ?1 LIMIT 1",
+                [content_hash],
+            )
+            .await?;
+
+        Ok(rows.next().await?.is_some())
+    }
+
+    /// Returns the hashes of all images for a given path
+    pub async fn get_image_hashes_by_path(&self, path: &str) -> turso::Result<Vec<String>> {
+        let subpath_pattern = format!("{}/%", path); // matches all subpaths
+        let mut rows = self
+            .conn
+            .query(
+                "SELECT content_hash FROM images WHERE path = ?1 OR path LIKE ?2",
+                [path, &subpath_pattern],
+            )
+            .await?;
+
+        let mut hashes = Vec::new();
+        while let Some(row) = rows.next().await? {
+            let hash: String = row.get(0)?;
+            hashes.push(hash);
+        }
+        Ok(hashes)
     }
 
     /// Adds a directory path to the imported paths list.

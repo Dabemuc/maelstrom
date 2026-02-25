@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 io = { path = "../../crates/io", package = "io" }
 maelstrom_core = { path = "../../crates/core", package = "core" }
+previews = { path = "../../crates/previews" }
 iced = { version = "0.14.0", features = ["svg"] }
 rfd = "0.17.2"
 tokio = { version = "1.0", features = ["full"] }

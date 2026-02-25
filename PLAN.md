@@ -13,7 +13,10 @@
 - [x] Navigator shows all imported directories from catalog and lets user set Working directory by clicking
 - [x] Working directory
 - [ ] Library view
-  - [ ] Generate and cache or load fotos from current working directory and show them in library view
+  - [x] Generate and cache or load previews for current working directory -> good enough for now
+  - [ ] Show them in library view 
+  - [ ] Build Nodes to support preview generation graph
+    - [ ] Resolution and Compress maybe?
   - [ ] User can switch to Develop view by double clicking foto
 - [ ] Develop view
   - [ ] Interactions modify node graph -> Rerendering of developed foto and its preview
