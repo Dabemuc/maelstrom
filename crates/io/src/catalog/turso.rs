@@ -5,6 +5,11 @@ pub struct TursoDB {
     conn: Connection,
 }
 
+pub struct ImageDO {
+    pub path: String,
+    pub hash: String,
+}
+
 impl TursoDB {
     /// Opens an existing catalog. Fails if the file does not exist.
     pub async fn open(path: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
@@ -77,23 +82,27 @@ impl TursoDB {
         Ok(rows.next().await?.is_some())
     }
 
-    /// Returns the hashes of all images for a given path
-    pub async fn get_image_hashes_by_path(&self, path: &str) -> turso::Result<Vec<String>> {
+    /// Returns the hashes of all images for a given path (and subpaths)
+    pub async fn get_image_dos_by_path(&self, path: &str) -> turso::Result<Vec<ImageDO>> {
         let subpath_pattern = format!("{}/%", path); // matches all subpaths
         let mut rows = self
             .conn
             .query(
-                "SELECT content_hash FROM images WHERE path = ?1 OR path LIKE ?2",
+                "SELECT path, content_hash FROM images WHERE path = ?1 OR path LIKE ?2",
                 [path, &subpath_pattern],
             )
             .await?;
 
-        let mut hashes = Vec::new();
+        let mut image_dos = Vec::new();
         while let Some(row) = rows.next().await? {
-            let hash: String = row.get(0)?;
-            hashes.push(hash);
+            let path: String = row.get(0)?;
+            let hash: String = row.get(1)?;
+            image_dos.push(ImageDO {
+                path: path,
+                hash: hash,
+            });
         }
-        Ok(hashes)
+        Ok(image_dos)
     }
 
     /// Adds a directory path to the imported paths list.

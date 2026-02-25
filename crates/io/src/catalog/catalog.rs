@@ -1,5 +1,6 @@
 use super::turso::TursoDB;
 use crate::catalog::catalog_error::CatalogError;
+use crate::catalog::turso::ImageDO;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -161,17 +162,17 @@ impl Catalog {
         Ok(())
     }
 
-    pub async fn get_all_hashes_for_path(
+    pub async fn get_all_image_dos_for_path(
         &self,
         path: impl AsRef<Path>,
-    ) -> Result<Vec<String>, CatalogError> {
+    ) -> Result<Vec<ImageDO>, CatalogError> {
         let path_ref = path.as_ref();
 
         let path_str = path_ref
             .to_str()
             .ok_or_else(|| CatalogError::InvalidPathEncoding(path_ref.to_path_buf()))?;
 
-        let hashes = self.db.get_image_hashes_by_path(path_str).await?;
+        let hashes = self.db.get_image_dos_by_path(path_str).await?;
         Ok(hashes)
     }
 

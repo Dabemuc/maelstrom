@@ -1,7 +1,9 @@
 use crate::{App, Message, ViewMode};
 use iced::alignment::Horizontal;
-use iced::widget::{Space, button, column, container, row, text};
+use iced::widget::image::Handle;
+use iced::widget::{Space, button, column, container, image, responsive, row, scrollable, text};
 use iced::{Alignment, Element, Length};
+use previews::preview_generation::PREVIEW_FILE_TYPE;
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
     let content = match state.view_mode {
@@ -55,12 +57,47 @@ fn no_catalog_view() -> Element<'static, Message> {
     .into()
 }
 
+const CELL_SIZE: f32 = 150.0; // box width/height
+const SPACING: f32 = 10.0;
+
 fn library_view(state: &App) -> Element<'_, Message> {
-    let mut col = column![];
+    let previews: Vec<_> = state.workspace_state.previews.iter().collect();
+    let catalog = state.catalog.clone().unwrap();
 
-    for pv in state.workspace_state.previews.clone() {
-        col = col.push(text(pv.hash));
-    }
+    scrollable(responsive(move |size| {
+        let available_width = size.width;
 
-    col.into()
+        let per_row = ((available_width + SPACING) / (CELL_SIZE + SPACING))
+            .floor()
+            .max(1.0) as usize;
+
+        let mut col = column![].spacing(SPACING);
+
+        for chunk in previews.chunks(per_row) {
+            let mut r = row![].spacing(SPACING);
+
+            for pv in chunk {
+                let path = catalog.root().join(catalog.cache_dir()).join(format!(
+                    "{}.{}",
+                    pv.hash,
+                    PREVIEW_FILE_TYPE.get_file_extension()
+                ));
+
+                let img = image(Handle::from_path(path))
+                    .width(Length::Fixed(CELL_SIZE))
+                    .height(Length::Fixed(CELL_SIZE));
+
+                r = r.push(
+                    container(img)
+                        .width(Length::Fixed(CELL_SIZE))
+                        .height(Length::Fixed(CELL_SIZE)),
+                );
+            }
+
+            col = col.push(r);
+        }
+
+        col.into()
+    }))
+    .into()
 }

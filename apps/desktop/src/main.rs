@@ -31,14 +31,13 @@ pub struct NavigatorState {
 }
 
 pub struct WorkspaceState {
-    previews: Vec<Preview>,
+    previews: HashSet<Preview>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Preview {
-    // path: PathBuf,
-    // original_path: PathBuf,
-    hash: String,
+    pub path_to_original: PathBuf,
+    pub hash: String,
 }
 
 pub struct App {
@@ -67,7 +66,7 @@ impl App {
                 image_counts: HashMap::new(),
             },
             workspace_state: WorkspaceState {
-                previews: Vec::new(),
+                previews: HashSet::new(),
             },
         };
 
@@ -308,6 +307,9 @@ impl App {
 
                 println!("Selected: {:?}", self.navigator_state.selected);
 
+                // For now clear previews. Later we could keep them
+                self.workspace_state.previews.clear();
+
                 // For now schedule one task that generates all previews of working directory at once.
                 // Later this should be batched
                 if let Some(catalog) = &self.catalog {
@@ -333,12 +335,20 @@ impl App {
                     let catalog_clone = catalog.clone();
                     Task::perform(
                         async move {
-                            let hashes = catalog_clone
-                                .get_all_hashes_for_path(path.clone())
+                            let image_dos = catalog_clone
+                                .get_all_image_dos_for_path(path.clone())
                                 .await
                                 .unwrap();
 
-                            hashes.into_iter().map(|h| Preview { hash: h }).collect()
+                            image_dos
+                                .into_iter()
+                                .map(|i| {
+                                    return Preview {
+                                        path_to_original: PathBuf::from(path.clone()),
+                                        hash: i.hash,
+                                    };
+                                })
+                                .collect()
                         },
                         Message::PreviewsLoaded,
                     )
@@ -347,8 +357,17 @@ impl App {
                 }
             }
             Message::PreviewsLoaded(previews) => {
-                println!("Loaded {} previews into state", previews.len());
-                self.workspace_state.previews = previews;
+                let mut count_alr_in_state = 0;
+                for p in previews.clone() {
+                    if !self.workspace_state.previews.insert(p) {
+                        count_alr_in_state += 1;
+                    }
+                }
+                println!(
+                    "Loaded {} of {} previews into state",
+                    previews.len() - count_alr_in_state,
+                    previews.len(),
+                );
                 Task::none()
             }
             Message::ImageCountResult((path, count)) => {
