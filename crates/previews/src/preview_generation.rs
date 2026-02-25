@@ -3,10 +3,12 @@ use std::path::PathBuf;
 use graph::{graph::Graph, node::Backend};
 use io::{
     catalog::catalog::{CACHE_DIR_NAME, Catalog},
-    image_files::supported_image_file_types::SupportedFileTypes,
+    image_files::supported_image_file_types::{SaveOptions, SupportedFileTypes},
 };
 use maelstrom_core::{color::color_space::ColorSpace, hash::hash_file};
 use ops::exposure::Exposure;
+
+pub const PREVIEW_FILE_TYPE: SupportedFileTypes = SupportedFileTypes::JPEG;
 
 pub async fn generate_preview_for_image(
     path_to_img: PathBuf,
@@ -27,7 +29,7 @@ pub async fn generate_preview_for_image(
 
     let image_file_type = SupportedFileTypes::from_filename(&filename).unwrap();
 
-    // 3. Hash image content
+    // 3. Hash image content & file name
     let content_hash = match hash_file(&path_to_img) {
         Ok(h) => h,
         Err(e) => {
@@ -77,12 +79,18 @@ pub async fn generate_preview_for_image(
     );
 
     // 8. Save preview using hash as filename
-    let preview_path_buf = catalog
-        .root()
-        .join(CACHE_DIR_NAME)
-        .join(format!("{}.png", content_hash));
+    let preview_path_buf = catalog.root().join(CACHE_DIR_NAME).join(format!(
+        "{}.{}",
+        content_hash,
+        PREVIEW_FILE_TYPE.get_file_extension()
+    ));
     let preview_path = preview_path_buf.to_str().unwrap();
-    if let Err(e) = image_file_type.save(&result, &preview_path, ColorSpace::Srgb) {
+    if let Err(e) = PREVIEW_FILE_TYPE.save(
+        &result,
+        &preview_path,
+        ColorSpace::Srgb,
+        Some(SaveOptions { quality: 50 }),
+    ) {
         eprintln!("Error saving preview for {:?}: {}", path_to_img, e);
         return;
     }

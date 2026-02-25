@@ -22,6 +22,7 @@ fn main() {
         &result,
         concat!(env!("CARGO_MANIFEST_DIR"), "/output.png"),
         ColorSpace::Srgb,
+        None,
     )
     .unwrap();
 }

@@ -17,6 +17,7 @@
   - [ ] Show them in library view 
   - [ ] Build Nodes to support preview generation graph
     - [ ] Resolution and Compress maybe?
+    - [ ] Store previews as jpeg
   - [ ] User can switch to Develop view by double clicking foto
 - [ ] Develop view
   - [ ] Interactions modify node graph -> Rerendering of developed foto and its preview
