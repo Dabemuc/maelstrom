@@ -131,7 +131,11 @@ fn build_folder_tree(
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| path.to_string_lossy().to_string());
 
-    let image_count = image_counts.get(path).copied().unwrap_or(0);
+    let mut no_count_yet = false;
+    let image_count = image_counts.get(path).copied().unwrap_or_else(|| {
+        no_count_yet = true;
+        0
+    });
 
     // --- Expand / Collapse Icon (only clickable area for toggling) ---
     let icon = if is_expanded { "▼" } else { "▶" };
@@ -168,10 +172,14 @@ fn build_folder_tree(
             .clip(true)
             .width(Length::Fill), // 64px
         // Space::new().width(10), // 10px
-        text(image_count.to_string())
-            .size(14)
-            .align_x(Right)
-            .width(24), // 24px
+        text(if !no_count_yet {
+            image_count.to_string()
+        } else {
+            "...".to_string()
+        })
+        .size(14)
+        .align_x(Right)
+        .width(24), // 24px
     ]
     .spacing(8)
     .height(Length::Fill)

@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
+use iced::futures::channel::oneshot;
 use iced::widget::image::Handle;
 use iced::widget::{Row, column};
 use iced::{Element, Length, Task};
@@ -289,19 +290,29 @@ impl App {
                         let counting_tasks: Vec<Task<Message>> = paths
                             .iter()
                             .map(|path| {
+                                let path = path.clone();
                                 Task::perform(
-                                    {
-                                        let path = path.clone(); // copy or clone as needed
-                                        async move {
+                                    async move {
+                                        println!("[Counting task] Starting count for {:?}", path);
+
+                                        // Use oneshot to avoid blocking the async executor
+                                        let (tx, rx) = oneshot::channel();
+                                        std::thread::spawn(move || {
                                             let count =
                                                 collect_images_in_folder(path.clone()).len();
-                                            (path, count) // return a tuple of (PathBuf, usize)
-                                        }
+                                            let _ = tx.send((path, count));
+                                        });
+
+                                        // Await asynchronously without blocking
+                                        rx.await.expect("Thread panicked or channel closed")
                                     },
-                                    Message::ImageCountResult, // this variant must accept (PathBuf, usize)
+                                    Message::ImageCountResult,
                                 )
                             })
                             .collect();
+
+                        println!("[Counting task] Starting {} tasks", counting_tasks.len());
+
                         Task::batch(counting_tasks)
                     }
                     Err(e) => {
@@ -569,6 +580,11 @@ impl App {
             }
 
             Message::ImageCountResult((path, count)) => {
+                println!(
+                    "[Counting task] Received result of {} for {}",
+                    count,
+                    path.to_str().unwrap()
+                );
                 self.navigator_state.image_counts.insert(path, count);
 
                 Task::none()
