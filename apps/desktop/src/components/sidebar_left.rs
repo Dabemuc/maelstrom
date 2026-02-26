@@ -175,7 +175,7 @@ fn build_folder_tree(
         text(if !no_count_yet {
             image_count.to_string()
         } else {
-            "...".to_string()
+            "".to_string()
         })
         .size(14)
         .align_x(Right)
