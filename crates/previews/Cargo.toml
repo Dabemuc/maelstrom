@@ -9,3 +9,4 @@ maelstrom_core = { path = "../core", package = "core"}
 ops = { path = "../ops" }
 io = { path = "../io" }
 graph = { path = "../graph" }
+thiserror = "2.0.18"

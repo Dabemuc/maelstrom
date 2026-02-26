@@ -59,15 +59,31 @@ impl TursoDB {
         Ok(Self { conn })
     }
 
-    /// Inserts an image hash (ignored if already exists).
-    pub async fn add_image(&self, content_hash: &str, path: &str) -> turso::Result<()> {
-        self.conn
-            .execute(
-                "INSERT OR IGNORE INTO images (content_hash, path) VALUES (?1, ?2)",
+    /// Inserts an image (ignored if already exists).
+    pub async fn add_image(&self, content_hash: &str, path: &str) -> turso::Result<ImageDO> {
+        let mut rows = self
+            .conn
+            .query(
+                r#"
+                INSERT INTO images (content_hash, path)
+                VALUES (?1, ?2)
+                ON CONFLICT(content_hash)
+                DO UPDATE SET path = images.path
+                RETURNING path, content_hash
+                "#,
                 [content_hash, path],
             )
             .await?;
-        Ok(())
+
+        let row = rows
+            .next()
+            .await?
+            .expect("RETURNING must return exactly one row");
+
+        Ok(ImageDO {
+            path: row.get(0)?,
+            hash: row.get(1)?,
+        })
     }
 
     /// Checks whether an image with this hash already exists.
