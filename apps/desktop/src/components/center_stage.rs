@@ -1,9 +1,7 @@
 use crate::{App, Message, ViewMode};
 use iced::alignment::Horizontal;
-use iced::widget::image::Handle;
 use iced::widget::{Space, button, column, container, image, responsive, row, scrollable, text};
 use iced::{Alignment, Element, Length};
-use previews::preview_generation::PREVIEW_FILE_TYPE;
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
     let content = match state.view_mode {
@@ -62,7 +60,6 @@ const SPACING: f32 = 10.0;
 
 fn library_view(state: &App) -> Element<'_, Message> {
     let previews: Vec<_> = state.workspace_state.previews.iter().collect();
-    let catalog = state.catalog.clone().unwrap();
 
     scrollable(responsive(move |size| {
         let available_width = size.width;
@@ -77,13 +74,7 @@ fn library_view(state: &App) -> Element<'_, Message> {
             let mut r = row![].spacing(SPACING);
 
             for pv in chunk {
-                let path = catalog.root().join(catalog.cache_dir()).join(format!(
-                    "{}.{}",
-                    pv.hash,
-                    PREVIEW_FILE_TYPE.get_file_extension()
-                ));
-
-                let img = image(Handle::from_path(path))
+                let img = image(pv.img_handle.clone())
                     .width(Length::Fixed(CELL_SIZE))
                     .height(Length::Fixed(CELL_SIZE));
 

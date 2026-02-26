@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
+use iced::widget::image::Handle;
 use iced::widget::{Row, column};
 use iced::{Element, Length, Task};
 
@@ -12,10 +14,11 @@ use components::divider::divider;
 use components::sidebar_left::{LeftSidebarMode, sidebar_left};
 use components::sidebar_right::{RightSidebarMode, sidebar_right};
 
+use io::catalog::ImageDO;
 use io::catalog::catalog::{CATALOG_FILE_NAME, CATALOG_FOLDER_NAME, Catalog};
 use io::catalog::catalog_error::CatalogError;
 use io::image_files::helpers::collect_images_in_folder;
-use previews::preview_generation::generate_preview_for_image;
+use previews::preview_generation::PREVIEW_FILE_TYPE;
 use rfd::FileDialog;
 
 pub enum ViewMode {
@@ -34,10 +37,19 @@ pub struct WorkspaceState {
     previews: HashSet<Preview>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Preview {
     pub path_to_original: PathBuf,
     pub hash: String,
+    pub img_handle: Handle,
+}
+
+impl Hash for Preview {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.path_to_original.hash(state);
+        self.hash.hash(state);
+        // handle ignored
+    }
 }
 
 pub struct App {
@@ -118,8 +130,8 @@ pub enum Message {
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
     ImageCountResult((PathBuf, usize)),
-    PreviewsGenerated(PathBuf),
-    PreviewsLoaded(Vec<Preview>),
+    ImageDOsLoadedForPath(Result<Vec<ImageDO>, CatalogError>),
+    PreviewDataLoadedForImage(Preview),
 }
 
 impl App {
@@ -310,66 +322,88 @@ impl App {
                 // For now clear previews. Later we could keep them
                 self.workspace_state.previews.clear();
 
-                // For now schedule one task that generates all previews of working directory at once.
-                // Later this should be batched
+                // Schedule Task to fetch all preview catalog entries
                 if let Some(catalog) = &self.catalog {
                     let catalog_clone = catalog.clone();
                     Task::perform(
                         async move {
-                            let images = collect_images_in_folder(path.clone());
-
-                            for p in images {
-                                generate_preview_for_image(p, &catalog_clone, false).await;
-                            }
-
-                            path
+                            println!("[Preview Loading] Step 1: Loading image DOs from catalog");
+                            catalog_clone.get_all_image_dos_for_path(path).await
                         },
-                        Message::PreviewsGenerated,
+                        Message::ImageDOsLoadedForPath,
                     )
                 } else {
                     Task::none()
                 }
             }
-            Message::PreviewsGenerated(path) => {
-                if let Some(catalog) = &self.catalog {
-                    let catalog_clone = catalog.clone();
-                    Task::perform(
-                        async move {
-                            let image_dos = catalog_clone
-                                .get_all_image_dos_for_path(path.clone())
-                                .await
-                                .unwrap();
+            Message::ImageDOsLoadedForPath(load_result) => match load_result {
+                Ok(image_dos) => {
+                    println!(
+                        "[Preview Loading] Step 1: Succesfully loaded {} image DOs from catalog",
+                        image_dos.len()
+                    );
 
-                            image_dos
-                                .into_iter()
-                                .map(|i| {
-                                    return Preview {
-                                        path_to_original: PathBuf::from(path.clone()),
-                                        hash: i.hash,
-                                    };
-                                })
-                                .collect()
-                        },
-                        Message::PreviewsLoaded,
-                    )
-                } else {
-                    Task::none()
-                }
-            }
-            Message::PreviewsLoaded(previews) => {
-                let mut count_alr_in_state = 0;
-                for p in previews.clone() {
-                    if !self.workspace_state.previews.insert(p) {
-                        count_alr_in_state += 1;
+                    // Next step: Schedule a task for each image to load Preview Data
+                    if let Some(catalog) = &self.catalog {
+                        let mut tasks = Vec::new();
+
+                        for image_do in image_dos {
+                            let catalog_clone = catalog.clone();
+
+                            let task = Task::perform(
+                                async move {
+                                    println!(
+                                        "[Preview Loading] Step 2: Loading preview data for {}",
+                                        image_do.path
+                                    );
+
+                                    let path = catalog_clone
+                                        .root()
+                                        .join(catalog_clone.cache_dir())
+                                        .join(format!(
+                                            "{}.{}",
+                                            image_do.hash,
+                                            PREVIEW_FILE_TYPE.get_file_extension()
+                                        ));
+
+                                    let handle = Handle::from_path(path);
+
+                                    Preview {
+                                        path_to_original: PathBuf::from(image_do.path),
+                                        hash: image_do.hash,
+                                        img_handle: handle,
+                                    }
+                                },
+                                Message::PreviewDataLoadedForImage,
+                            );
+
+                            tasks.push(task);
+                        }
+
+                        // Run simultaniously
+                        return Task::batch(tasks);
+                    } else {
+                        println!("[Preview Loading] Step 2: Failed to load previews. No Catalog");
+                        Task::none()
                     }
                 }
+                Err(e) => {
+                    println!(
+                        "[Preview Loading] Step 1: Error while loading image DOs from catalog: {}",
+                        e
+                    );
+                    Task::none()
+                }
+            },
+            Message::PreviewDataLoadedForImage(preview) => {
                 println!(
-                    "Loaded {} of {} previews into state",
-                    previews.len() - count_alr_in_state,
-                    previews.len(),
+                    "[Preview Loading] Step 2: Loaded preview data for image {}",
+                    preview.path_to_original.to_str().unwrap()
                 );
+                self.workspace_state.previews.insert(preview);
                 Task::none()
             }
+
             Message::ImageCountResult((path, count)) => {
                 self.navigator_state.image_counts.insert(path, count);
 

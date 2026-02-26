@@ -5,6 +5,7 @@ pub struct TursoDB {
     conn: Connection,
 }
 
+#[derive(Debug, Clone)]
 pub struct ImageDO {
     pub path: String,
     pub hash: String,
