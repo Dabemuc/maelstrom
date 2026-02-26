@@ -22,6 +22,7 @@
     - [x] TODO: Rework preview generation and loading. Should be like this: 
       - Load previews for folder asynchronously all at once -> Put them into state independently of each other
       - In background start cache refresh to check if cache matches images in filesystem
+    - [ ] Cache Refresh Progress bar
     - [ ] Enable user to handle missing image
   - [ ] User can switch to Develop view by double clicking foto
 - [ ] Develop view

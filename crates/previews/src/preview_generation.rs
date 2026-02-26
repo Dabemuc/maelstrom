@@ -10,7 +10,7 @@ use io::{
     image_files::supported_image_file_types::{SaveOptions, SupportedFileTypes},
 };
 use maelstrom_core::{color::color_space::ColorSpace, hash::hash_file};
-use ops::exposure::Exposure;
+use ops::downsample_fixed::DownsampleFixed;
 use thiserror::Error;
 
 pub const PREVIEW_FILE_TYPE: SupportedFileTypes = SupportedFileTypes::JPEG;
@@ -94,8 +94,10 @@ pub async fn generate_preview_for_image(
 
     // 6. Define preview generation graph
     let mut graph = Graph::new();
-    // Temporary exposure node. should be downsample and compress
-    graph.add_node(Exposure { ev: 3.0 });
+    graph.add_node(DownsampleFixed {
+        max_width: 480,
+        max_height: 480,
+    });
 
     // 7. Generate preview
     let result = graph.execute(image_linear, Backend::Cpu);
