@@ -2,19 +2,45 @@ use std::path::PathBuf;
 
 use graph::{graph::Graph, node::Backend};
 use io::{
-    catalog::catalog::{CACHE_DIR_NAME, Catalog},
+    catalog::{
+        ImageDO,
+        catalog::{CACHE_DIR_NAME, Catalog},
+        catalog_error::CatalogError,
+    },
     image_files::supported_image_file_types::{SaveOptions, SupportedFileTypes},
 };
 use maelstrom_core::{color::color_space::ColorSpace, hash::hash_file};
 use ops::exposure::Exposure;
+use thiserror::Error;
 
 pub const PREVIEW_FILE_TYPE: SupportedFileTypes = SupportedFileTypes::JPEG;
+
+#[derive(Debug, Error, Clone)]
+pub enum PreviewGenerationError {
+    #[error("CatalogError: {0:?}")]
+    CatalogError(CatalogError),
+
+    #[error("Filetype not supported")]
+    FiletypeNotSupported,
+
+    #[error("Image entry already exists in catalog")]
+    AlreadyExists,
+
+    #[error("Failed to generate hash for image")]
+    HashingError,
+
+    #[error("Skipped")]
+    Skipped,
+
+    #[error("Error when saving to fs: {0:?}")]
+    SavingError(String),
+}
 
 pub async fn generate_preview_for_image(
     path_to_img: PathBuf,
     catalog: &Catalog,
     overwrite_if_exists: bool,
-) {
+) -> Result<ImageDO, PreviewGenerationError> {
     // 1. get file name
     let filename = path_to_filename(path_to_img.clone());
 
@@ -24,7 +50,7 @@ pub async fn generate_preview_for_image(
             "Preview generation failed. Filetype is not supported: {:?}",
             path_to_img
         );
-        return;
+        return Err(PreviewGenerationError::FiletypeNotSupported);
     }
 
     let image_file_type = SupportedFileTypes::from_filename(&filename).unwrap();
@@ -37,7 +63,7 @@ pub async fn generate_preview_for_image(
                 "Preview generation failed. Error hashing image {:?}: {}",
                 path_to_img, e
             );
-            return;
+            return Err(PreviewGenerationError::HashingError);
         }
     };
 
@@ -46,7 +72,7 @@ pub async fn generate_preview_for_image(
         Ok(v) => v,
         Err(e) => {
             eprintln!("Preview generation failed. Catalog check failed: {}", e);
-            return;
+            return Err(PreviewGenerationError::AlreadyExists);
         }
     };
 
@@ -55,7 +81,7 @@ pub async fn generate_preview_for_image(
             "Preview generation skipped. Preview already exists for {:?}",
             path_to_img
         );
-        return;
+        return Err(PreviewGenerationError::Skipped);
     }
 
     // 5. Load image
@@ -92,18 +118,24 @@ pub async fn generate_preview_for_image(
         Some(SaveOptions { quality: 50 }),
     ) {
         eprintln!("Error saving preview for {:?}: {}", path_to_img, e);
-        return;
+        return Err(PreviewGenerationError::SavingError(e.to_string()));
     }
 
     // 9. Insert image into DB (if new)
     if !exists {
-        if let Err(e) = catalog
+        match catalog
             .add_image(&content_hash, path_to_img.to_str().unwrap())
             .await
         {
-            eprintln!("Failed to insert image hash into catalog: {}", e);
+            Ok(image_do) => return Ok(image_do),
+            Err(e) => {
+                eprintln!("Failed to insert image hash into catalog: {}", e);
+                return Err(PreviewGenerationError::CatalogError(e));
+            }
         }
-    }
+    } else {
+        return Err(PreviewGenerationError::AlreadyExists);
+    };
 }
 
 fn path_to_filename(path: PathBuf) -> String {

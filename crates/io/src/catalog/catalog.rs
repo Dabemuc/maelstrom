@@ -151,15 +151,14 @@ impl Catalog {
         &self,
         content_hash: &str,
         path: impl AsRef<Path>,
-    ) -> Result<(), CatalogError> {
+    ) -> Result<ImageDO, CatalogError> {
         let path_ref = path.as_ref();
 
         let path_str = path_ref
             .to_str()
             .ok_or_else(|| CatalogError::InvalidPathEncoding(path_ref.to_path_buf()))?;
 
-        self.db.add_image(content_hash, path_str).await?;
-        Ok(())
+        Ok(self.db.add_image(content_hash, path_str).await?)
     }
 
     pub async fn get_all_image_dos_for_path(

@@ -1,9 +1,10 @@
-use crate::{App, Message, ViewMode};
+use crate::{App, Message, PreviewState, ViewMode};
 use iced::alignment::Horizontal;
-use iced::widget::image::Handle;
-use iced::widget::{Space, button, column, container, image, responsive, row, scrollable, text};
+use iced::widget::tooltip::Position;
+use iced::widget::{
+    Space, button, column, container, image, responsive, row, scrollable, text, tooltip,
+};
 use iced::{Alignment, Element, Length};
-use previews::preview_generation::PREVIEW_FILE_TYPE;
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
     let content = match state.view_mode {
@@ -62,7 +63,8 @@ const SPACING: f32 = 10.0;
 
 fn library_view(state: &App) -> Element<'_, Message> {
     let previews: Vec<_> = state.workspace_state.previews.iter().collect();
-    let catalog = state.catalog.clone().unwrap();
+
+    // println!("[Center Stage] Rendering previews: {:?}", previews);
 
     scrollable(responsive(move |size| {
         let available_width = size.width;
@@ -77,20 +79,31 @@ fn library_view(state: &App) -> Element<'_, Message> {
             let mut r = row![].spacing(SPACING);
 
             for pv in chunk {
-                let path = catalog.root().join(catalog.cache_dir()).join(format!(
-                    "{}.{}",
-                    pv.hash,
-                    PREVIEW_FILE_TYPE.get_file_extension()
-                ));
+                let img = image(
+                    if pv.1.img_handle.is_some() && pv.1.preview_state == PreviewState::Ok {
+                        pv.1.img_handle.clone().unwrap().clone()
+                    } else {
+                        let handle = state
+                            .workspace_state
+                            .handle_to_missing_preview_placeholder
+                            .clone();
 
-                let img = image(Handle::from_path(path))
-                    .width(Length::Fixed(CELL_SIZE))
-                    .height(Length::Fixed(CELL_SIZE));
+                        println!(
+                            "[Center Stage] preview has no handle or is in non-Ok state: {:?}. Using missing image handle: {:?}",
+                            pv.1, handle
+                        );
+
+                        handle
+                    },
+                )
+                .width(Length::Fixed(CELL_SIZE))
+                .height(Length::Fixed(CELL_SIZE));
 
                 r = r.push(
-                    container(img)
+                    container(tooltip(img, pv.1.path_to_original.to_str(), Position::Top))
                         .width(Length::Fixed(CELL_SIZE))
-                        .height(Length::Fixed(CELL_SIZE)),
+                        .height(Length::Fixed(CELL_SIZE))
+                        .padding(10),
                 );
             }
 

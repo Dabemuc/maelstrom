@@ -14,14 +14,15 @@
 - [x] Working directory
 - [ ] Library view
   - [x] Generate and cache or load previews for current working directory -> good enough for now
-  - [ ] Show them in library view 
+  - [x] Show them in library view 
   - [ ] Build Nodes to support preview generation graph
     - [ ] Resolution and Compress maybe?
     - [x] Store previews as jpeg
       - [ ] Vllt auch Memory-mapped Previews? RGBA raw bytes or BC7 compressed textures.
-    - [ ] TODO: Rework preview generation and loading. Should be like this: 
+    - [x] TODO: Rework preview generation and loading. Should be like this: 
       - Load previews for folder asynchronously all at once -> Put them into state independently of each other
       - In background start cache refresh to check if cache matches images in filesystem
+    - [ ] Enable user to handle missing image
   - [ ] User can switch to Develop view by double clicking foto
 - [ ] Develop view
   - [ ] Interactions modify node graph -> Rerendering of developed foto and its preview

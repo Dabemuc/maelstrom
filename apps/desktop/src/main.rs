@@ -1,8 +1,13 @@
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
+use iced::widget::image::Handle;
 use iced::widget::{Row, column};
 use iced::{Element, Length, Task};
+
+mod business;
+use business::cache::compare_cache_to_fs;
 
 mod components;
 use components::center_stage::center_stage;
@@ -12,10 +17,13 @@ use components::divider::divider;
 use components::sidebar_left::{LeftSidebarMode, sidebar_left};
 use components::sidebar_right::{RightSidebarMode, sidebar_right};
 
+use io::catalog::ImageDO;
 use io::catalog::catalog::{CATALOG_FILE_NAME, CATALOG_FOLDER_NAME, Catalog};
 use io::catalog::catalog_error::CatalogError;
 use io::image_files::helpers::collect_images_in_folder;
-use previews::preview_generation::generate_preview_for_image;
+use previews::preview_generation::{
+    PREVIEW_FILE_TYPE, PreviewGenerationError, generate_preview_for_image,
+};
 use rfd::FileDialog;
 
 pub enum ViewMode {
@@ -31,13 +39,31 @@ pub struct NavigatorState {
 }
 
 pub struct WorkspaceState {
-    previews: HashSet<Preview>,
+    previews: HashMap<String, Preview>,
+    handle_to_missing_preview_placeholder: Handle,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Preview {
     pub path_to_original: PathBuf,
     pub hash: String,
+    pub img_handle: Option<Handle>,
+    pub preview_state: PreviewState,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PreviewState {
+    Ok,
+    OriginalMissing,
+}
+
+impl Hash for Preview {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.path_to_original.hash(state);
+        self.hash.hash(state);
+        // handle ignored
+        self.preview_state.hash(state);
+    }
 }
 
 pub struct App {
@@ -66,7 +92,10 @@ impl App {
                 image_counts: HashMap::new(),
             },
             workspace_state: WorkspaceState {
-                previews: HashSet::new(),
+                previews: HashMap::new(),
+                handle_to_missing_preview_placeholder: Handle::from_bytes(
+                    include_bytes!("../assets/static/image_missing.png").to_vec(),
+                ),
             },
         };
 
@@ -118,8 +147,10 @@ pub enum Message {
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
     ImageCountResult((PathBuf, usize)),
-    PreviewsGenerated(PathBuf),
-    PreviewsLoaded(Vec<Preview>),
+    ImageDOsLoadedForPath(Result<Vec<ImageDO>, CatalogError>),
+    PreviewDataLoadedForImage(Preview),
+    CacheRefreshDone((Vec<PathBuf>, Vec<ImageDO>)),
+    PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
 }
 
 impl App {
@@ -310,66 +341,233 @@ impl App {
                 // For now clear previews. Later we could keep them
                 self.workspace_state.previews.clear();
 
-                // For now schedule one task that generates all previews of working directory at once.
-                // Later this should be batched
                 if let Some(catalog) = &self.catalog {
                     let catalog_clone = catalog.clone();
-                    Task::perform(
+                    let path_clone = path.clone();
+                    // Task to fetch all preview catalog entries
+                    let fetch_previews_task = Task::perform(
                         async move {
-                            let images = collect_images_in_folder(path.clone());
-
-                            for p in images {
-                                generate_preview_for_image(p, &catalog_clone, false).await;
-                            }
-
-                            path
+                            println!("[Preview Loading] Step 1: Loading image DOs from catalog");
+                            catalog_clone.get_all_image_dos_for_path(path_clone).await
                         },
-                        Message::PreviewsGenerated,
-                    )
-                } else {
-                    Task::none()
-                }
-            }
-            Message::PreviewsGenerated(path) => {
-                if let Some(catalog) = &self.catalog {
+                        Message::ImageDOsLoadedForPath,
+                    );
+
+                    // Task to refresh Cache
                     let catalog_clone = catalog.clone();
-                    Task::perform(
+                    let path_clone = path.clone();
+                    let refresh_cache_task = Task::perform(
                         async move {
-                            let image_dos = catalog_clone
-                                .get_all_image_dos_for_path(path.clone())
+                            println!("[Cache Refresh] Step 1: Start cache refresh");
+
+                            // Get all images in path and compare to entries in catalog
+                            let paths_of_images_in_folder =
+                                collect_images_in_folder(path_clone.clone());
+                            let image_dos_in_catalog = catalog_clone
+                                .get_all_image_dos_for_path(path_clone)
                                 .await
                                 .unwrap();
+                            let (images_to_add_to_catalog, catalog_image_dos_to_delete) =
+                                compare_cache_to_fs(
+                                    paths_of_images_in_folder,
+                                    image_dos_in_catalog,
+                                );
 
-                            image_dos
-                                .into_iter()
-                                .map(|i| {
-                                    return Preview {
-                                        path_to_original: PathBuf::from(path.clone()),
-                                        hash: i.hash,
-                                    };
-                                })
-                                .collect()
+                            println!(
+                                "[Cache Refresh] Step 1: Found {} images not indexed in catalog and {} indexed images that are not found in the fs:",
+                                images_to_add_to_catalog.len(),
+                                catalog_image_dos_to_delete.len()
+                            );
+
+                            //perform adds/deletes
+                            if images_to_add_to_catalog.len() > 0 {
+                                println!(
+                                    "[Cache Refresh] Step 1: Images not indexed: {:#?}",
+                                    images_to_add_to_catalog
+                                );
+                            }
+                            if catalog_image_dos_to_delete.len() > 0 {
+                                println!(
+                                    "[Cache Refresh] Step 1: Indexed images not in fs: {:#?}",
+                                    catalog_image_dos_to_delete
+                                );
+                            }
+
+                            (images_to_add_to_catalog, catalog_image_dos_to_delete)
                         },
-                        Message::PreviewsLoaded,
-                    )
+                        Message::CacheRefreshDone,
+                    );
+
+                    Task::batch([fetch_previews_task, refresh_cache_task])
                 } else {
                     Task::none()
                 }
             }
-            Message::PreviewsLoaded(previews) => {
-                let mut count_alr_in_state = 0;
-                for p in previews.clone() {
-                    if !self.workspace_state.previews.insert(p) {
-                        count_alr_in_state += 1;
+            Message::ImageDOsLoadedForPath(load_result) => match load_result {
+                Ok(image_dos) => {
+                    println!(
+                        "[Preview Loading] Step 1: Succesfully loaded {} image DOs from catalog",
+                        image_dos.len()
+                    );
+
+                    // Next step: Schedule a task for each image to load Preview Data
+                    if let Some(catalog) = &self.catalog {
+                        let mut tasks = Vec::new();
+
+                        for image_do in image_dos {
+                            let catalog_clone = catalog.clone();
+
+                            let task = Task::perform(
+                                async move {
+                                    println!(
+                                        "[Preview Loading] Step 2: Loading preview data for {}",
+                                        image_do.path
+                                    );
+
+                                    let path = catalog_clone
+                                        .root()
+                                        .join(catalog_clone.cache_dir())
+                                        .join(format!(
+                                            "{}.{}",
+                                            image_do.hash,
+                                            PREVIEW_FILE_TYPE.get_file_extension()
+                                        ));
+
+                                    Preview {
+                                        path_to_original: PathBuf::from(image_do.path),
+                                        hash: image_do.hash,
+                                        img_handle: if path.exists() {
+                                            Some(Handle::from_path(path.clone()))
+                                        } else {
+                                            None
+                                        },
+                                        preview_state: if path.exists() {
+                                            PreviewState::Ok
+                                        } else {
+                                            PreviewState::OriginalMissing
+                                        },
+                                    }
+                                },
+                                Message::PreviewDataLoadedForImage,
+                            );
+
+                            tasks.push(task);
+                        }
+
+                        // Run simultaniously
+                        return Task::batch(tasks);
+                    } else {
+                        println!("[Preview Loading] Step 2: Failed to load previews. No Catalog");
+                        Task::none()
                     }
                 }
+                Err(e) => {
+                    println!(
+                        "[Preview Loading] Step 1: Error while loading image DOs from catalog: {}",
+                        e
+                    );
+                    Task::none()
+                }
+            },
+            Message::CacheRefreshDone((images_to_add_to_catalog, catalog_image_dos_to_delete)) => {
+                println!("[Cache Refresh] Step 1: Cache refresh done",);
+
+                // adds
                 println!(
-                    "Loaded {} of {} previews into state",
-                    previews.len() - count_alr_in_state,
-                    previews.len(),
+                    "[Cache Refresh] Step 2: Performing {} adds",
+                    images_to_add_to_catalog.len(),
                 );
+                let mut add_tasks: Vec<Task<Message>> = Vec::new();
+                if let Some(catalog) = &self.catalog {
+                    for path in images_to_add_to_catalog {
+                        let catalog_clone = catalog.clone();
+
+                        add_tasks.push(Task::perform(
+                            async move {
+                                generate_preview_for_image(
+                                    path,
+                                    &catalog_clone,
+                                    false,
+                                )
+                                .await
+                            },
+                            Message::PreviewGenerated,
+                        ));
+                    }
+                } else {
+                    println!("[Cache Refresh] Step 2: Failed to perform adds. No catalog");
+                }
+
+                // deletes (For now we dont want to completely remove entry. Just set state)
+                println!(
+                    "[Cache Refresh] Step 2: Performing {} deletes",
+                    catalog_image_dos_to_delete.len(),
+                );
+                for image_do in catalog_image_dos_to_delete {
+                    if let Some(preview) = self.workspace_state.previews.get_mut(&image_do.hash) {
+                        preview.preview_state = PreviewState::OriginalMissing;
+                    } else {
+                        println!(
+                            "[Cache Refresh] Step 2: Failed to update preview state for imageDO {:?}",
+                            image_do
+                        );
+                    }
+                }
+
+                return Task::batch(add_tasks);
+            }
+            Message::PreviewGenerated(result) => match result {
+                Ok(image_do) => {
+                    if let Some(catalog) = &self.catalog {
+                        let catalog_clone = catalog.clone();
+                        let path =
+                            catalog_clone
+                                .root()
+                                .join(catalog_clone.cache_dir())
+                                .join(format!(
+                                    "{}.{}",
+                                    image_do.hash,
+                                    PREVIEW_FILE_TYPE.get_file_extension()
+                                ));
+                        self.workspace_state.previews.insert(
+                            image_do.hash.clone(),
+                            Preview {
+                                path_to_original: PathBuf::from(image_do.path),
+                                hash: image_do.hash,
+                                img_handle: if path.exists() {
+                                    Some(Handle::from_path(path.clone()))
+                                } else {
+                                    None
+                                },
+                                preview_state: if path.exists() {
+                                    PreviewState::Ok
+                                } else {
+                                    PreviewState::OriginalMissing
+                                },
+                            },
+                        );
+
+                        Task::none()
+                    } else {
+                        Task::none()
+                    }
+                }
+                Err(e) => {
+                    println!("[Preview Generation] Failed with error: {}", e);
+                    Task::none()
+                }
+            },
+            Message::PreviewDataLoadedForImage(preview) => {
+                println!(
+                    "[Preview Loading] Step 2: Loaded preview data for image {}",
+                    preview.path_to_original.to_str().unwrap()
+                );
+                self.workspace_state
+                    .previews
+                    .insert(preview.hash.clone(), preview);
                 Task::none()
             }
+
             Message::ImageCountResult((path, count)) => {
                 self.navigator_state.image_counts.insert(path, count);
 
