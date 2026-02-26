@@ -19,7 +19,7 @@
   - [x] shows all imported directories from catalog 
   - [x] lets user set Working directory by clicking
   - [ ] Opption to remove directory
-- [ ] Scalable sidebars
+- [ ] Scalable sidebars -> Store in settings table
 ## Library view
   - [x] Generate and cache or load previews for current working directory -> good enough for now
   - [x] Show them in library view 
