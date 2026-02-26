@@ -1,9 +1,8 @@
+use crate::components::common::styled_tooltip::styled_tooltip;
 use crate::{App, Message, PreviewState, ViewMode};
 use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
-use iced::widget::{
-    Space, button, column, container, image, responsive, row, scrollable, text, tooltip,
-};
+use iced::widget::{Space, button, column, container, image, responsive, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
@@ -100,7 +99,7 @@ fn library_view(state: &App) -> Element<'_, Message> {
                 .height(Length::Fixed(CELL_SIZE));
 
                 r = r.push(
-                    container(tooltip(img, pv.1.path_to_original.to_str(), Position::Top))
+                    container(styled_tooltip(img, pv.1.path_to_original.to_str().unwrap_or(""), Position::Top))
                         .width(Length::Fixed(CELL_SIZE))
                         .height(Length::Fixed(CELL_SIZE))
                         .padding(10),

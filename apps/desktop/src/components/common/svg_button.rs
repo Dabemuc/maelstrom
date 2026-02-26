@@ -1,7 +1,8 @@
 use crate::Message;
+use crate::components::common::styled_tooltip::styled_tooltip;
 use iced::Length;
 use iced::widget::tooltip::Position;
-use iced::widget::{button, svg, tooltip};
+use iced::widget::{button, svg};
 
 pub fn icon_button<'a>(
     handle: svg::Handle,
@@ -22,7 +23,7 @@ pub fn icon_button<'a>(
             }
         });
 
-    let btn = button(tooltip(icon, label, Position::Top)).padding(5);
+    let btn = button(styled_tooltip(icon, label, Position::Top)).padding(5);
 
     btn.style(|theme: &iced::Theme, status: button::Status| {
         let mut style = button::text(theme, status);

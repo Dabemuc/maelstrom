@@ -4,7 +4,7 @@
     - [x] info about imported directories
     - [ ] metadate of imported files
       - [ ] Nodegraph (if exists)
-      - [ ] preview file location
+      - [x] preview file location
     - [ ] settings
   - [x] Maelstrom needs an active catalog -> On startup if no catalog found in default location make the user create one or import existing one
     - [x] no_catalog_view 
