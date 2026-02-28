@@ -82,27 +82,24 @@ fn library_view(state: &App) -> Element<'_, Message> {
                     if pv.1.img_handle.is_some() && pv.1.preview_state == PreviewState::Ok {
                         pv.1.img_handle.clone().unwrap().clone()
                     } else {
-                        let handle = state
+                        state
                             .workspace_state
                             .handle_to_missing_preview_placeholder
-                            .clone();
-
-                        println!(
-                            "[Center Stage] preview has no handle or is in non-Ok state: {:?}. Using missing image handle: {:?}",
-                            pv.1, handle
-                        );
-
-                        handle
+                            .clone()
                     },
                 )
                 .width(Length::Fixed(CELL_SIZE))
                 .height(Length::Fixed(CELL_SIZE));
 
                 r = r.push(
-                    container(styled_tooltip(img, pv.1.path_to_original.to_str().unwrap_or(""), Position::Top))
-                        .width(Length::Fixed(CELL_SIZE))
-                        .height(Length::Fixed(CELL_SIZE))
-                        .padding(10),
+                    container(styled_tooltip(
+                        img,
+                        pv.1.path_to_original.to_str().unwrap_or(""),
+                        Position::Top,
+                    ))
+                    .width(Length::Fixed(CELL_SIZE))
+                    .height(Length::Fixed(CELL_SIZE))
+                    .padding(10),
                 );
             }
 

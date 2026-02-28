@@ -51,25 +51,39 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
         return text("No Catalog").into();
     }
 
-    let roots: Vec<PathBuf> = if !state.workspace_state.model.root_folders.is_empty() {
-        state.workspace_state.model.root_folders.clone()
-    } else {
+    let roots: Vec<PathBuf> = if !state.imported_dirs.is_empty() {
         state.imported_dirs.clone()
+    } else {
+        state.workspace_state.model.root_folders.clone()
     };
 
     let mut tree_col = column![];
 
     for root in roots {
-        tree_col = tree_col
-            .push(build_folder_tree(
-                &root,
-                &state.navigator_state.expanded,
-                &state.navigator_state.selected,
-                &state.workspace_state.model.folder_index,
-                0,
-            ))
-            .push(divider(false));
+        let is_scanning = state.workspace_state.roots_scanning.contains(&root);
+
+        tree_col = if is_scanning {
+            tree_col
+                .push(build_loading_root_row(&root, 0))
+                .push(divider(false))
+        } else {
+            tree_col
+                .push(build_folder_tree(
+                    &root,
+                    &state.navigator_state.expanded,
+                    &state.navigator_state.selected,
+                    &state.workspace_state.model.folder_index,
+                    0,
+                ))
+                .push(divider(false))
+        };
     }
+
+    let tree_scroll = iced::widget::Scrollable::new(
+        iced::widget::Scrollable::new(tree_col).direction(Direction::Horizontal(Scrollbar::new())),
+    )
+    .direction(Direction::Vertical(Scrollbar::new()))
+    .height(Length::Fill);
 
     let content = column![
         row![
@@ -96,12 +110,63 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
         .align_y(Center)
         .width(300),
         divider(false),
-        iced::widget::Scrollable::new(tree_col).direction(Direction::Horizontal(Scrollbar::new()))
+        tree_scroll
     ]
     .width(Length::Shrink)
     .height(Length::Fill);
 
     content.into()
+}
+
+fn build_loading_root_row(path: &PathBuf, depth: usize) -> Element<'static, Message> {
+    let indent = 20 * depth as u16;
+    let label = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.to_string_lossy().to_string());
+
+    let loading_icon = container(
+        text("▶")
+            .size(14)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Center)
+            .align_y(Center),
+    )
+    .width(24)
+    .height(24);
+
+    let row_content = row![
+        loading_icon,
+        container(
+            text(format!("{label} (loading...)"))
+                .size(14)
+                .wrapping(text::Wrapping::None)
+        )
+        .clip(true)
+        .width(Length::Fill),
+        text("...").size(14).align_x(Right).width(24),
+    ]
+    .spacing(8)
+    .height(Length::Fill)
+    .width(235)
+    .align_y(Center);
+
+    container(
+        row![
+            Space::new().width(Length::Fixed(indent as f32)),
+            row_content,
+            Space::new().width(15),
+        ]
+        .height(Length::Fill),
+    )
+    .height(32)
+    .padding([0, 8])
+    .style(|_theme: &iced::Theme| container::Style {
+        text_color: Some(iced::Color::from_rgba8(140, 140, 140, 1.0)),
+        ..container::Style::default()
+    })
+    .into()
 }
 
 fn build_folder_tree(
