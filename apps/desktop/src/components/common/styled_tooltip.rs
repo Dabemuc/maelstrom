@@ -1,4 +1,4 @@
-use crate::Message;
+use crate::message::Message;
 use iced::border::Radius;
 use iced::widget::tooltip::Position;
 use iced::widget::{Tooltip, container, text};

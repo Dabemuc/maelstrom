@@ -1,5 +1,8 @@
+use crate::app::App;
 use crate::components::common::svg_button::icon_button;
-use crate::{App, LeftSidebarMode, Message, RightSidebarMode};
+use crate::components::sidebar_left::LeftSidebarMode;
+use crate::components::sidebar_right::RightSidebarMode;
+use crate::message::Message;
 use iced::widget::{Space, container, row, svg};
 use iced::{Alignment, Element, Length};
 

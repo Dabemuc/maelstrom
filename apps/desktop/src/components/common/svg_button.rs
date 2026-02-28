@@ -1,5 +1,5 @@
-use crate::Message;
 use crate::components::common::styled_tooltip::styled_tooltip;
+use crate::message::Message;
 use iced::Length;
 use iced::widget::tooltip::Position;
 use iced::widget::{button, svg};

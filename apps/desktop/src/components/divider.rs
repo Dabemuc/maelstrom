@@ -1,6 +1,6 @@
 use iced::{Element, Length, widget::container};
 
-use crate::Message;
+use crate::message::Message;
 
 // A helper function to create a 1px divider
 pub fn divider(vertival: bool) -> Element<'static, Message> {

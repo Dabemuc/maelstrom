@@ -1,5 +1,7 @@
+use crate::app::App;
 use crate::components::common::styled_tooltip::styled_tooltip;
-use crate::{App, Message, PreviewState, ViewMode};
+use crate::message::Message;
+use crate::state::{PreviewState, ViewMode};
 use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
 use iced::widget::{Space, button, column, container, image, responsive, row, scrollable, text};

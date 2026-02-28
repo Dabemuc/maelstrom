@@ -1,7 +1,8 @@
+use crate::app::App;
 use crate::business::workspace::FolderNode;
 use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
-use crate::{App, Message};
+use crate::message::Message;
 use iced::Alignment::Center;
 use iced::alignment::Horizontal::Right;
 use iced::border::Radius;

@@ -1,4 +1,5 @@
-use crate::{App, Message};
+use crate::app::App;
+use crate::message::Message;
 use iced::widget::{Space, container, row};
 use iced::{Alignment, Element, Length};
 

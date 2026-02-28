@@ -1,6 +1,7 @@
-use crate::ViewMode;
+use crate::app::App;
 use crate::components::divider::divider;
-use crate::{App, Message};
+use crate::message::Message;
+use crate::state::ViewMode;
 use iced::widget::{Scrollable, container, row, text};
 use iced::{Element, Length};
 
