@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Instant;
 
@@ -39,6 +39,8 @@ pub enum ViewMode {
 pub struct NavigatorState {
     expanded: HashSet<PathBuf>,
     selected: Option<PathBuf>,
+    context_menu_root: Option<PathBuf>,
+    context_menu_open: bool,
 }
 
 pub struct WorkspaceState {
@@ -79,15 +81,8 @@ impl Hash for Preview {
 }
 
 #[derive(Debug, Clone)]
-pub struct SelectionLoadData {
-    selected_path: PathBuf,
-    root_path: PathBuf,
-    scan_result: FolderScanResult,
-    image_dos: Vec<ImageDO>,
-}
-
-#[derive(Debug, Clone)]
 pub struct SelectionDiffData {
+    request_id: u64,
     selected_path: PathBuf,
     images_to_add_to_catalog: Vec<PathBuf>,
     catalog_image_dos_to_delete: Vec<ImageDO>,
@@ -101,6 +96,8 @@ pub struct App {
     pub imported_dirs: Vec<PathBuf>,
     pub navigator_state: NavigatorState,
     pub workspace_state: WorkspaceState,
+    selection_request_seq: u64,
+    active_selection_request_id: Option<u64>,
 }
 
 static APP_START: OnceLock<Instant> = OnceLock::new();
@@ -128,6 +125,8 @@ impl App {
             navigator_state: NavigatorState {
                 expanded: HashSet::new(),
                 selected: None,
+                context_menu_root: None,
+                context_menu_open: false,
             },
             workspace_state: WorkspaceState {
                 model: WorkspaceModel::default(),
@@ -138,6 +137,8 @@ impl App {
                     include_bytes!("../assets/static/image_missing.png").to_vec(),
                 ),
             },
+            selection_request_seq: 0,
+            active_selection_request_id: None,
         };
 
         let config_base = dirs::config_dir()
@@ -197,14 +198,6 @@ impl App {
         )
     }
 
-    fn find_root_for_selected(imported_dirs: &[PathBuf], selected: &Path) -> Option<PathBuf> {
-        imported_dirs
-            .iter()
-            .filter(|root| selected.starts_with(root))
-            .max_by_key(|root| root.components().count())
-            .cloned()
-    }
-
     fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Preview {
         let path = catalog.root().join(catalog.cache_dir()).join(format!(
             "{}.{}",
@@ -244,8 +237,11 @@ pub enum Message {
     ErrorMessage(String),
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
+    OpenRootContextMenu(PathBuf),
+    CloseRootContextMenu,
+    RefreshImportedRoot(PathBuf),
     WorkspaceRootScanned((PathBuf, FolderScanResult)),
-    SelectionDataReady(Result<SelectionLoadData, CatalogError>),
+    SelectionCatalogLoaded(Result<(u64, PathBuf, Vec<ImageDO>), CatalogError>),
     SelectionDiffComputed(SelectionDiffData),
     PreviewDataLoadedForImage(Preview),
     PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
@@ -393,12 +389,43 @@ impl App {
             },
             Message::ErrorMessage(_msg) => Task::none(),
             Message::ToggleDirectory(path) => {
+                self.navigator_state.context_menu_open = false;
+                self.navigator_state.context_menu_root = None;
+
                 if self.navigator_state.expanded.contains(&path) {
                     self.navigator_state.expanded.remove(&path);
                 } else {
                     self.navigator_state.expanded.insert(path);
                 }
                 Task::none()
+            }
+            Message::OpenRootContextMenu(path) => {
+                self.navigator_state.context_menu_root = Some(path);
+                self.navigator_state.context_menu_open = true;
+                Task::none()
+            }
+            Message::CloseRootContextMenu => {
+                self.navigator_state.context_menu_open = false;
+                self.navigator_state.context_menu_root = None;
+                Task::none()
+            }
+            Message::RefreshImportedRoot(root) => {
+                self.navigator_state.context_menu_open = false;
+                self.navigator_state.context_menu_root = None;
+                self.workspace_state.roots_scanning.insert(root.clone());
+
+                Task::perform(
+                    async move {
+                        let (tx, rx) = oneshot::channel();
+                        std::thread::spawn(move || {
+                            let scan_result = scan_folder_images(root.clone());
+                            let _ = tx.send((root, scan_result));
+                        });
+
+                        rx.await.expect("Thread panicked or channel closed")
+                    },
+                    Message::WorkspaceRootScanned,
+                )
             }
             Message::WorkspaceRootScanned((root, scan_result)) => {
                 startup_log(&format!(
@@ -419,61 +446,47 @@ impl App {
                 Task::none()
             }
             Message::SelectDirectory(path) => {
+                self.navigator_state.context_menu_open = false;
+                self.navigator_state.context_menu_root = None;
+
                 if self.navigator_state.selected.as_ref() == Some(&path) {
                     self.navigator_state.selected = None;
                     self.workspace_state.previews.clear();
+                    self.selection_request_seq = self.selection_request_seq.wrapping_add(1);
+                    self.active_selection_request_id = None;
                     return Task::none();
                 }
 
                 self.navigator_state.selected = Some(path.clone());
+                self.selection_request_seq = self.selection_request_seq.wrapping_add(1);
+                let request_id = self.selection_request_seq;
+                self.active_selection_request_id = Some(request_id);
                 self.refresh_selected_previews_from_cache();
 
                 let Some(catalog) = self.catalog.clone() else {
                     return Task::none();
                 };
 
-                let Some(root_path) = Self::find_root_for_selected(&self.imported_dirs, &path)
-                else {
-                    println!(
-                        "[Selection] No imported root found for selected folder: {:?}",
-                        path
-                    );
-                    return Task::none();
-                };
-
                 Task::perform(
                     async move {
                         let selected_path = path.clone();
-
-                        let (tx, rx) = oneshot::channel();
-                        let root_for_thread = root_path.clone();
-                        std::thread::spawn(move || {
-                            let scan_result = scan_folder_images(root_for_thread);
-                            let _ = tx.send(scan_result);
-                        });
-
-                        let scan_result = rx.await.expect("Thread panicked or channel closed");
                         let image_dos = catalog.get_all_image_dos_for_path(&selected_path).await?;
-
-                        Ok(SelectionLoadData {
-                            selected_path,
-                            root_path,
-                            scan_result,
-                            image_dos,
-                        })
+                        Ok((request_id, selected_path, image_dos))
                     },
-                    Message::SelectionDataReady,
+                    Message::SelectionCatalogLoaded,
                 )
             }
-            Message::SelectionDataReady(load_result) => match load_result {
-                Ok(data) => {
-                    self.workspace_state.model.apply_root_scan_update(
-                        &data.root_path,
-                        Self::to_workspace_scan_result(&data.scan_result),
-                    );
-                    self.workspace_state.roots_scanning.remove(&data.root_path);
+            Message::SelectionCatalogLoaded(load_result) => match load_result {
+                Ok((request_id, selected_path, image_dos)) => {
+                    if self.active_selection_request_id != Some(request_id) {
+                        return Task::none();
+                    }
 
-                    for image_do in &data.image_dos {
+                    if self.navigator_state.selected.as_ref() != Some(&selected_path) {
+                        return Task::none();
+                    }
+
+                    for image_do in &image_dos {
                         self.workspace_state.model.upsert_preview_key(
                             image_do.hash.clone(),
                             PathBuf::from(&image_do.path),
@@ -487,7 +500,7 @@ impl App {
                     if let Some(catalog) = &self.catalog {
                         let catalog_clone = catalog.clone();
 
-                        for image_do in &data.image_dos {
+                        for image_do in &image_dos {
                             let hash = image_do.hash.clone();
 
                             if self.workspace_state.preview_cache.contains_key(&hash) {
@@ -505,25 +518,25 @@ impl App {
                         }
                     }
 
-                    let selected_path = data.selected_path.clone();
-                    let selected_fs_images: Vec<PathBuf> = data
-                        .scan_result
-                        .all_image_paths
-                        .iter()
-                        .filter(|p| p.starts_with(&selected_path))
-                        .cloned()
-                        .collect();
-                    let image_dos_for_diff = data.image_dos.clone();
+                    let selected_path_for_diff = selected_path.clone();
+                    let image_dos_for_diff = image_dos.clone();
 
                     tasks.push(Task::perform(
                         async move {
                             let (tx, rx) = oneshot::channel();
                             std::thread::spawn(move || {
+                                let selected_scan =
+                                    scan_folder_images(selected_path_for_diff.clone());
+
                                 let (images_to_add_to_catalog, catalog_image_dos_to_delete) =
-                                    compare_cache_to_fs(selected_fs_images, image_dos_for_diff);
+                                    compare_cache_to_fs(
+                                        selected_scan.all_image_paths,
+                                        image_dos_for_diff,
+                                    );
 
                                 let _ = tx.send(SelectionDiffData {
-                                    selected_path,
+                                    request_id,
+                                    selected_path: selected_path_for_diff,
                                     images_to_add_to_catalog,
                                     catalog_image_dos_to_delete,
                                 });
@@ -542,6 +555,10 @@ impl App {
                 }
             },
             Message::SelectionDiffComputed(diff_data) => {
+                if self.active_selection_request_id != Some(diff_data.request_id) {
+                    return Task::none();
+                }
+
                 for image_do in diff_data.catalog_image_dos_to_delete {
                     if let Some(preview) =
                         self.workspace_state.preview_cache.get_mut(&image_do.hash)

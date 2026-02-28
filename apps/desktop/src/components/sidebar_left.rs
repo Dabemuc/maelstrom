@@ -6,7 +6,7 @@ use iced::Alignment::Center;
 use iced::alignment::Horizontal::Right;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, Scrollbar};
-use iced::widget::{Space, button, column, container, row, svg, text};
+use iced::widget::{Space, button, column, container, mouse_area, row, svg, text};
 use iced::{Element, Length};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -64,7 +64,13 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
 
         tree_col = if is_scanning {
             tree_col
-                .push(build_loading_root_row(&root, 0))
+                .push(build_loading_root_row(
+                    &root,
+                    0,
+                    &state.navigator_state.context_menu_root,
+                    state.navigator_state.context_menu_open,
+                    true,
+                ))
                 .push(divider(false))
         } else {
             tree_col
@@ -73,6 +79,8 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
                     &state.navigator_state.expanded,
                     &state.navigator_state.selected,
                     &state.workspace_state.model.folder_index,
+                    &state.navigator_state.context_menu_root,
+                    state.navigator_state.context_menu_open,
                     0,
                 ))
                 .push(divider(false))
@@ -118,7 +126,13 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
     content.into()
 }
 
-fn build_loading_root_row(path: &PathBuf, depth: usize) -> Element<'static, Message> {
+fn build_loading_root_row(
+    path: &PathBuf,
+    depth: usize,
+    context_menu_root: &Option<PathBuf>,
+    context_menu_open: bool,
+    is_scanning: bool,
+) -> Element<'static, Message> {
     let indent = 20 * depth as u16;
     let label = path
         .file_name()
@@ -152,11 +166,11 @@ fn build_loading_root_row(path: &PathBuf, depth: usize) -> Element<'static, Mess
     .width(235)
     .align_y(Center);
 
-    container(
+    let root_row = container(
         row![
             Space::new().width(Length::Fixed(indent as f32)),
             row_content,
-            Space::new().width(15),
+            Space::new().width(Length::Fixed(15.0)),
         ]
         .height(Length::Fill),
     )
@@ -165,8 +179,17 @@ fn build_loading_root_row(path: &PathBuf, depth: usize) -> Element<'static, Mess
     .style(|_theme: &iced::Theme| container::Style {
         text_color: Some(iced::Color::from_rgba8(140, 140, 140, 1.0)),
         ..container::Style::default()
-    })
-    .into()
+    });
+
+    let mut col = column![];
+
+    col = col.push(mouse_area(root_row).on_right_press(Message::OpenRootContextMenu(path.clone())));
+
+    if context_menu_open && context_menu_root.as_ref() == Some(path) {
+        col = col.push(build_root_context_menu(path, is_scanning));
+    }
+
+    col.into()
 }
 
 fn build_folder_tree(
@@ -174,11 +197,14 @@ fn build_folder_tree(
     expanded: &HashSet<PathBuf>,
     selected: &Option<PathBuf>,
     folder_index: &HashMap<PathBuf, FolderNode>,
+    context_menu_root: &Option<PathBuf>,
+    context_menu_open: bool,
     depth: usize,
 ) -> Element<'static, Message> {
     let indent = 20 * depth as u16;
     let is_expanded = expanded.contains(path);
     let is_selected = selected.as_ref() == Some(path);
+    let is_root = depth == 0;
 
     let mut col = column![];
 
@@ -247,7 +273,7 @@ fn build_folder_tree(
     let row = row![
         Space::new().width(Length::Fixed(indent as f32)),
         row_content,
-        Space::new().width(15),
+        Space::new().width(Length::Fixed(15.0)),
     ];
 
     let selectable_row = button(row)
@@ -256,7 +282,13 @@ fn build_folder_tree(
         .on_press(Message::SelectDirectory(path.clone()))
         .style(folder_row_style(is_selected));
 
-    col = col.push(selectable_row);
+    if is_root {
+        col = col.push(
+            mouse_area(selectable_row).on_right_press(Message::OpenRootContextMenu(path.clone())),
+        );
+    } else {
+        col = col.push(selectable_row);
+    }
 
     if is_expanded {
         if let Some(node) = node {
@@ -269,10 +301,16 @@ fn build_folder_tree(
                     expanded,
                     selected,
                     folder_index,
+                    context_menu_root,
+                    context_menu_open,
                     depth + 1,
                 ));
             }
         }
+    }
+
+    if is_root && context_menu_open && context_menu_root.as_ref() == Some(path) {
+        col = col.push(build_root_context_menu(path, false));
     }
 
     if depth == 0 {
@@ -280,6 +318,52 @@ fn build_folder_tree(
     }
 
     col.into()
+}
+
+fn build_root_context_menu(root: &PathBuf, is_scanning: bool) -> Element<'static, Message> {
+    let refresh_button = {
+        let button = button(
+            text(if is_scanning {
+                "Refresh (running...)"
+            } else {
+                "Refresh"
+            })
+            .size(13),
+        )
+        .padding([6, 10])
+        .width(Length::Shrink);
+
+        if is_scanning {
+            button
+        } else {
+            button.on_press(Message::RefreshImportedRoot(root.clone()))
+        }
+    };
+
+    container(
+        row![
+            Space::new().width(Length::Fixed(24.0)),
+            row![
+                refresh_button,
+                button(text("Close").size(13))
+                    .padding([6, 10])
+                    .on_press(Message::CloseRootContextMenu)
+            ]
+            .spacing(6),
+            Space::new().width(Length::Fill),
+        ]
+        .align_y(Center),
+    )
+    .padding([4, 8])
+    .style(|theme: &iced::Theme| {
+        let palette = theme.extended_palette();
+        container::Style {
+            background: Some(palette.background.strong.color.into()),
+            text_color: Some(palette.background.strong.text),
+            ..container::Style::default()
+        }
+    })
+    .into()
 }
 
 fn folder_row_style(
