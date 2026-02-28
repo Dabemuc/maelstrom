@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use iced::futures::channel::oneshot;
 use iced::widget::image::Handle;
@@ -9,6 +9,7 @@ use iced::{Element, Length, Task};
 
 mod business;
 use business::cache::compare_cache_to_fs;
+use business::workspace::{WorkspaceModel, WorkspaceScanResult};
 
 mod components;
 use components::center_stage::center_stage;
@@ -21,7 +22,7 @@ use components::sidebar_right::{RightSidebarMode, sidebar_right};
 use io::catalog::ImageDO;
 use io::catalog::catalog::{CATALOG_FILE_NAME, CATALOG_FOLDER_NAME, Catalog};
 use io::catalog::catalog_error::CatalogError;
-use io::image_files::helpers::collect_images_in_folder;
+use io::image_files::helpers::{FolderScanResult, scan_folder_images};
 use previews::preview_generation::{
     PREVIEW_FILE_TYPE, PreviewGenerationError, generate_preview_for_image,
 };
@@ -36,12 +37,18 @@ pub enum ViewMode {
 pub struct NavigatorState {
     expanded: HashSet<PathBuf>,
     selected: Option<PathBuf>,
-    image_counts: HashMap<PathBuf, usize>,
 }
 
 pub struct WorkspaceState {
-    previews: HashMap<String, Preview>,
-    handle_to_missing_preview_placeholder: Handle,
+    pub model: WorkspaceModel,
+
+    // Persistent preview payload cache (hash -> Preview).
+    pub preview_cache: HashMap<String, Preview>,
+
+    // Current render set for selected folder (kept for compatibility with existing center stage).
+    pub previews: HashMap<String, Preview>,
+
+    pub handle_to_missing_preview_placeholder: Handle,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,9 +69,16 @@ impl Hash for Preview {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.path_to_original.hash(state);
         self.hash.hash(state);
-        // handle ignored
         self.preview_state.hash(state);
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct SelectionLoadData {
+    selected_path: PathBuf,
+    root_path: PathBuf,
+    scan_result: FolderScanResult,
+    image_dos: Vec<ImageDO>,
 }
 
 pub struct App {
@@ -80,7 +94,6 @@ pub struct App {
 // init state
 impl App {
     pub fn new() -> (Self, Task<Message>) {
-        // 1. Initialize default state
         let app = Self {
             left_sidebar_mode: LeftSidebarMode::Navigator,
             right_sidebar_mode: RightSidebarMode::Hidden,
@@ -90,9 +103,10 @@ impl App {
             navigator_state: NavigatorState {
                 expanded: HashSet::new(),
                 selected: None,
-                image_counts: HashMap::new(),
             },
             workspace_state: WorkspaceState {
+                model: WorkspaceModel::default(),
+                preview_cache: HashMap::new(),
                 previews: HashMap::new(),
                 handle_to_missing_preview_placeholder: Handle::from_bytes(
                     include_bytes!("../assets/static/image_missing.png").to_vec(),
@@ -100,21 +114,17 @@ impl App {
             },
         };
 
-        // 2. Determine base config directory
         let config_base = dirs::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("maelstrom");
 
-        // Ensure the base directory exists
         if !config_base.exists() {
             println!("User config dir doesnt exists at {:?}", config_base);
             return (app, Task::none());
         }
 
-        // 3. Compute the catalog root folder
         let catalog_root = config_base.join(CATALOG_FOLDER_NAME);
 
-        // 4. Prepare the startup task
         let startup_task = if catalog_root.join(CATALOG_FILE_NAME).exists() {
             Task::perform(
                 Catalog::load(catalog_root.clone()),
@@ -129,6 +139,63 @@ impl App {
         };
 
         (app, startup_task)
+    }
+
+    fn refresh_selected_previews_from_cache(&mut self) {
+        self.workspace_state.previews.clear();
+
+        let Some(selected) = self.navigator_state.selected.as_ref() else {
+            return;
+        };
+
+        for key in self
+            .workspace_state
+            .model
+            .preview_keys_for_selected_folder(selected)
+        {
+            if let Some(preview) = self.workspace_state.preview_cache.get(&key) {
+                self.workspace_state.previews.insert(key, preview.clone());
+            }
+        }
+    }
+
+    fn to_workspace_scan_result(scan_result: &FolderScanResult) -> WorkspaceScanResult {
+        WorkspaceScanResult::new(
+            scan_result.all_image_paths.clone(),
+            scan_result.all_folders.clone(),
+            scan_result.direct_image_counts.clone(),
+        )
+    }
+
+    fn find_root_for_selected(imported_dirs: &[PathBuf], selected: &Path) -> Option<PathBuf> {
+        imported_dirs
+            .iter()
+            .filter(|root| selected.starts_with(root))
+            .max_by_key(|root| root.components().count())
+            .cloned()
+    }
+
+    fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Preview {
+        let path = catalog.root().join(catalog.cache_dir()).join(format!(
+            "{}.{}",
+            image_do.hash,
+            PREVIEW_FILE_TYPE.get_file_extension()
+        ));
+
+        Preview {
+            path_to_original: PathBuf::from(&image_do.path),
+            hash: image_do.hash.clone(),
+            img_handle: if path.exists() {
+                Some(Handle::from_path(path.clone()))
+            } else {
+                None
+            },
+            preview_state: if path.exists() {
+                PreviewState::Ok
+            } else {
+                PreviewState::OriginalMissing
+            },
+        }
     }
 }
 
@@ -147,10 +214,9 @@ pub enum Message {
     ErrorMessage(String),
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
-    ImageCountResult((PathBuf, usize)),
-    ImageDOsLoadedForPath(Result<Vec<ImageDO>, CatalogError>),
+    WorkspaceRootScanned((PathBuf, FolderScanResult)),
+    SelectionDataReady(Result<SelectionLoadData, CatalogError>),
     PreviewDataLoadedForImage(Preview),
-    CacheRefreshDone((Vec<PathBuf>, Vec<ImageDO>)),
     PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
 }
 
@@ -178,156 +244,121 @@ impl App {
                 Task::none()
             }
             Message::CreateCatalog => {
-                println!("Click create");
                 if let Some(path) = FileDialog::new().pick_folder() {
-                    return Task::perform(Catalog::create(path), Message::CatalogLoadAttempted);
+                    Task::perform(Catalog::create(path), Message::CatalogLoadAttempted)
                 } else {
                     println!("FileDialog canceled");
                     Task::none()
                 }
             }
             Message::SelectCatalog => {
-                println!("Click select");
                 if let Some(path) = FileDialog::new().pick_folder() {
-                    return Task::perform(Catalog::load(path), Message::CatalogLoadAttempted);
+                    Task::perform(Catalog::load(path), Message::CatalogLoadAttempted)
                 } else {
                     println!("FileDialog canceled");
                     Task::none()
                 }
             }
-            Message::CatalogLoadAttempted(result) => {
-                match result {
-                    Ok(catalog) => {
-                        // Store catalog in state
-                        self.catalog = Some(catalog.clone());
+            Message::CatalogLoadAttempted(result) => match result {
+                Ok(catalog) => {
+                    self.catalog = Some(catalog.clone());
+                    let catalog_for_task = catalog.clone();
 
-                        // Clone catalog for async task
-                        let catalog_for_task = catalog.clone();
-
-                        // Return a Task that prints metadata asynchronously
-                        return Task::perform(
-                            async move {
-                                // Any errors ignored here, just printing
-                                catalog_for_task.print_metadata().await.ok();
-                            },
-                            |_| Message::CatalogLoaded, // Dummy callback, owns a clone
-                        );
-                    }
-                    Err(e) => {
-                        eprintln!("Error loading catalog: {}", e);
-                        Task::none()
-                    }
+                    Task::perform(
+                        async move {
+                            catalog_for_task.print_metadata().await.ok();
+                        },
+                        |_| Message::CatalogLoaded,
+                    )
                 }
-            }
+                Err(e) => {
+                    eprintln!("Error loading catalog: {}", e);
+                    Task::none()
+                }
+            },
             Message::CatalogLoaded => {
                 self.view_mode = ViewMode::Library;
-
-                let load_dirs_task = Task::perform(async {}, |_| Message::LoadImportedDirectories);
-
-                load_dirs_task.chain(Task::none())
+                Task::perform(async {}, |_| Message::LoadImportedDirectories)
             }
             Message::NavigatorCollapseAll => {
                 self.navigator_state.expanded.clear();
-
                 Task::none()
             }
             Message::ImportDirectory => {
-                println!("Click import");
-
-                // Ensure catalog is loaded
-                let catalog = if let Some(c) = self.catalog.clone() {
-                    c
-                } else {
+                let Some(catalog) = self.catalog.clone() else {
                     println!("Cannot import directory: no catalog loaded");
                     return Task::none();
                 };
 
-                // Pick a folder
                 if let Some(path) = FileDialog::new().pick_folder() {
                     let catalog_clone = catalog.clone();
-                    return Task::perform(
+                    Task::perform(
                         async move {
-                            // Import the folder
                             let result = catalog_clone.import_directory(path.clone()).await;
-
-                            // Print metadata after successful import
                             if result.is_ok() {
                                 catalog_clone.print_metadata().await.ok();
                             }
-
                             result
                         },
                         |res| match res {
                             Ok(_) => Message::LoadImportedDirectories,
-                            Err(e) => {
-                                eprintln!("Failed to import directory: {}", e);
-                                Message::ErrorMessage(format!("Failed to import directory"))
-                            }
+                            Err(_e) => Message::ErrorMessage("Failed to import directory".into()),
                         },
-                    );
+                    )
+                } else {
+                    println!("FileDialog canceled");
+                    Task::none()
                 }
-
-                println!("FileDialog canceled");
-                Task::none()
             }
             Message::LoadImportedDirectories => {
                 if let Some(catalog) = &self.catalog {
                     let catalog_clone = catalog.clone();
-                    return Task::perform(
+                    Task::perform(
                         async move { catalog_clone.get_imported_directories().await },
                         Message::ImportedDirectoriesLoadAttempted,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+            Message::ImportedDirectoriesLoadAttempted(result) => match result {
+                Ok(paths) => {
+                    self.imported_dirs = paths.clone();
+
+                    self.workspace_state.model.clear();
+                    self.workspace_state.preview_cache.clear();
+                    self.workspace_state.previews.clear();
+
+                    let scan_tasks: Vec<Task<Message>> = paths
+                        .iter()
+                        .cloned()
+                        .map(|root| {
+                            Task::perform(
+                                async move {
+                                    let (tx, rx) = oneshot::channel();
+                                    std::thread::spawn(move || {
+                                        let scan_result = scan_folder_images(root.clone());
+                                        let _ = tx.send((root, scan_result));
+                                    });
+
+                                    rx.await.expect("Thread panicked or channel closed")
+                                },
+                                Message::WorkspaceRootScanned,
+                            )
+                        })
+                        .collect();
+
+                    Task::batch(scan_tasks)
+                }
+                Err(e) => {
+                    println!(
+                        "Error while loading imported directories from catalog: {0:?}",
+                        e
                     );
+                    Task::none()
                 }
-                Task::none()
-            }
-            Message::ImportedDirectoriesLoadAttempted(result) => {
-                match result {
-                    Ok(paths) => {
-                        self.imported_dirs = paths.clone();
-                        println!("Successfully loaded imported directories into state");
-
-                        // Start image counting
-                        let counting_tasks: Vec<Task<Message>> = paths
-                            .iter()
-                            .map(|path| {
-                                let path = path.clone();
-                                Task::perform(
-                                    async move {
-                                        println!("[Counting task] Starting count for {:?}", path);
-
-                                        // Use oneshot to avoid blocking the async executor
-                                        let (tx, rx) = oneshot::channel();
-                                        std::thread::spawn(move || {
-                                            let count =
-                                                collect_images_in_folder(path.clone()).len();
-                                            let _ = tx.send((path, count));
-                                        });
-
-                                        // Await asynchronously without blocking
-                                        rx.await.expect("Thread panicked or channel closed")
-                                    },
-                                    Message::ImageCountResult,
-                                )
-                            })
-                            .collect();
-
-                        println!("[Counting task] Starting {} tasks", counting_tasks.len());
-
-                        Task::batch(counting_tasks)
-                    }
-                    Err(e) => {
-                        println!(
-                            "Error while Loading imported directories from catalog: {0:?}",
-                            e
-                        );
-                        Task::none()
-                    }
-                }
-            }
-            Message::ErrorMessage(_msg) => {
-                // eventually show the message in a popup or smth
-                Task::none()
-            }
+            },
+            Message::ErrorMessage(_msg) => Task::none(),
             Message::ToggleDirectory(path) => {
                 if self.navigator_state.expanded.contains(&path) {
                     self.navigator_state.expanded.remove(&path);
@@ -336,232 +367,164 @@ impl App {
                 }
                 Task::none()
             }
-            Message::SelectDirectory(path) => {
-                if self.navigator_state.selected.is_none() {
-                    self.navigator_state.selected = Some(path.clone());
-                } else {
-                    if self.navigator_state.selected.as_ref().unwrap() == &path {
-                        self.navigator_state.selected = None;
-                    } else {
-                        self.navigator_state.selected = Some(path.clone())
-                    }
-                }
-
-                println!("Selected: {:?}", self.navigator_state.selected);
-
-                // For now clear previews. Later we could keep them
-                self.workspace_state.previews.clear();
-
-                if let Some(catalog) = &self.catalog {
-                    let catalog_clone = catalog.clone();
-                    let path_clone = path.clone();
-                    // Task to fetch all preview catalog entries
-                    let fetch_previews_task = Task::perform(
-                        async move {
-                            println!("[Preview Loading] Step 1: Loading image DOs from catalog");
-                            catalog_clone.get_all_image_dos_for_path(path_clone).await
-                        },
-                        Message::ImageDOsLoadedForPath,
-                    );
-
-                    // Task to refresh Cache
-                    let catalog_clone = catalog.clone();
-                    let path_clone = path.clone();
-                    let refresh_cache_task = Task::perform(
-                        async move {
-                            println!("[Cache Refresh] Step 1: Start cache refresh");
-
-                            // Get all images in path and compare to entries in catalog
-                            let paths_of_images_in_folder =
-                                collect_images_in_folder(path_clone.clone());
-                            let image_dos_in_catalog = catalog_clone
-                                .get_all_image_dos_for_path(path_clone)
-                                .await
-                                .unwrap();
-                            let (images_to_add_to_catalog, catalog_image_dos_to_delete) =
-                                compare_cache_to_fs(
-                                    paths_of_images_in_folder,
-                                    image_dos_in_catalog,
-                                );
-
-                            println!(
-                                "[Cache Refresh] Step 1: Found {} images not indexed in catalog and {} indexed images that are not found in the fs:",
-                                images_to_add_to_catalog.len(),
-                                catalog_image_dos_to_delete.len()
-                            );
-
-                            //perform adds/deletes
-                            if images_to_add_to_catalog.len() > 0 {
-                                println!(
-                                    "[Cache Refresh] Step 1: Images not indexed: {:#?}",
-                                    images_to_add_to_catalog
-                                );
-                            }
-                            if catalog_image_dos_to_delete.len() > 0 {
-                                println!(
-                                    "[Cache Refresh] Step 1: Indexed images not in fs: {:#?}",
-                                    catalog_image_dos_to_delete
-                                );
-                            }
-
-                            (images_to_add_to_catalog, catalog_image_dos_to_delete)
-                        },
-                        Message::CacheRefreshDone,
-                    );
-
-                    Task::batch([fetch_previews_task, refresh_cache_task])
-                } else {
-                    Task::none()
-                }
+            Message::WorkspaceRootScanned((root, scan_result)) => {
+                self.workspace_state
+                    .model
+                    .apply_root_scan_update(&root, Self::to_workspace_scan_result(&scan_result));
+                Task::none()
             }
-            Message::ImageDOsLoadedForPath(load_result) => match load_result {
-                Ok(image_dos) => {
+            Message::SelectDirectory(path) => {
+                if self.navigator_state.selected.as_ref() == Some(&path) {
+                    self.navigator_state.selected = None;
+                    self.workspace_state.previews.clear();
+                    return Task::none();
+                }
+
+                self.navigator_state.selected = Some(path.clone());
+                self.refresh_selected_previews_from_cache();
+
+                let Some(catalog) = self.catalog.clone() else {
+                    return Task::none();
+                };
+
+                let Some(root_path) = Self::find_root_for_selected(&self.imported_dirs, &path)
+                else {
                     println!(
-                        "[Preview Loading] Step 1: Succesfully loaded {} image DOs from catalog",
-                        image_dos.len()
+                        "[Selection] No imported root found for selected folder: {:?}",
+                        path
+                    );
+                    return Task::none();
+                };
+
+                Task::perform(
+                    async move {
+                        let selected_path = path.clone();
+
+                        let (tx, rx) = oneshot::channel();
+                        let root_for_thread = root_path.clone();
+                        std::thread::spawn(move || {
+                            let scan_result = scan_folder_images(root_for_thread);
+                            let _ = tx.send(scan_result);
+                        });
+
+                        let scan_result = rx.await.expect("Thread panicked or channel closed");
+                        let image_dos = catalog.get_all_image_dos_for_path(&selected_path).await?;
+
+                        Ok(SelectionLoadData {
+                            selected_path,
+                            root_path,
+                            scan_result,
+                            image_dos,
+                        })
+                    },
+                    Message::SelectionDataReady,
+                )
+            }
+            Message::SelectionDataReady(load_result) => match load_result {
+                Ok(data) => {
+                    self.workspace_state.model.apply_root_scan_update(
+                        &data.root_path,
+                        Self::to_workspace_scan_result(&data.scan_result),
                     );
 
-                    // Next step: Schedule a task for each image to load Preview Data
-                    if let Some(catalog) = &self.catalog {
-                        let mut tasks = Vec::new();
+                    for image_do in &data.image_dos {
+                        self.workspace_state.model.upsert_preview_key(
+                            image_do.hash.clone(),
+                            PathBuf::from(&image_do.path),
+                        );
+                    }
 
-                        for image_do in image_dos {
-                            let catalog_clone = catalog.clone();
+                    self.refresh_selected_previews_from_cache();
 
-                            let task = Task::perform(
-                                async move {
-                                    println!(
-                                        "[Preview Loading] Step 2: Loading preview data for {}",
-                                        image_do.path
-                                    );
+                    let selected_fs_images: Vec<PathBuf> = data
+                        .scan_result
+                        .all_image_paths
+                        .iter()
+                        .filter(|p| p.starts_with(&data.selected_path))
+                        .cloned()
+                        .collect();
 
-                                    let path = catalog_clone
-                                        .root()
-                                        .join(catalog_clone.cache_dir())
-                                        .join(format!(
-                                            "{}.{}",
-                                            image_do.hash,
-                                            PREVIEW_FILE_TYPE.get_file_extension()
-                                        ));
+                    let (images_to_add_to_catalog, catalog_image_dos_to_delete) =
+                        compare_cache_to_fs(selected_fs_images, data.image_dos.clone());
 
-                                    Preview {
-                                        path_to_original: PathBuf::from(image_do.path),
-                                        hash: image_do.hash,
-                                        img_handle: if path.exists() {
-                                            Some(Handle::from_path(path.clone()))
-                                        } else {
-                                            None
-                                        },
-                                        preview_state: if path.exists() {
-                                            PreviewState::Ok
-                                        } else {
-                                            PreviewState::OriginalMissing
-                                        },
-                                    }
-                                },
-                                Message::PreviewDataLoadedForImage,
-                            );
+                    let mut tasks: Vec<Task<Message>> = Vec::new();
 
-                            tasks.push(task);
+                    for image_do in catalog_image_dos_to_delete {
+                        if let Some(preview) =
+                            self.workspace_state.preview_cache.get_mut(&image_do.hash)
+                        {
+                            preview.preview_state = PreviewState::OriginalMissing;
                         }
 
-                        // Run simultaniously
-                        return Task::batch(tasks);
-                    } else {
-                        println!("[Preview Loading] Step 2: Failed to load previews. No Catalog");
-                        Task::none()
+                        if let Some(preview) = self.workspace_state.previews.get_mut(&image_do.hash)
+                        {
+                            preview.preview_state = PreviewState::OriginalMissing;
+                        }
                     }
+
+                    if let Some(catalog) = &self.catalog {
+                        let catalog_clone = catalog.clone();
+
+                        for image_do in data.image_dos {
+                            let hash = image_do.hash.clone();
+
+                            if self.workspace_state.preview_cache.contains_key(&hash) {
+                                continue;
+                            }
+
+                            let catalog_for_task = catalog_clone.clone();
+                            tasks.push(Task::perform(
+                                async move {
+                                    println!(
+                                        "[Preview Loading] Loading preview data for {}",
+                                        image_do.path
+                                    );
+                                    Self::build_preview_from_image_do(&catalog_for_task, &image_do)
+                                },
+                                Message::PreviewDataLoadedForImage,
+                            ));
+                        }
+
+                        for path in images_to_add_to_catalog {
+                            let catalog_for_task = catalog_clone.clone();
+                            tasks.push(Task::perform(
+                                async move {
+                                    generate_preview_for_image(path, &catalog_for_task, false).await
+                                },
+                                Message::PreviewGenerated,
+                            ));
+                        }
+                    }
+
+                    Task::batch(tasks)
                 }
                 Err(e) => {
-                    println!(
-                        "[Preview Loading] Step 1: Error while loading image DOs from catalog: {}",
-                        e
-                    );
+                    println!("[Selection] Failed to load data for selected folder: {}", e);
                     Task::none()
                 }
             },
-            Message::CacheRefreshDone((images_to_add_to_catalog, catalog_image_dos_to_delete)) => {
-                println!("[Cache Refresh] Step 1: Cache refresh done",);
-
-                // adds
-                println!(
-                    "[Cache Refresh] Step 2: Performing {} adds",
-                    images_to_add_to_catalog.len(),
-                );
-                let mut add_tasks: Vec<Task<Message>> = Vec::new();
-                if let Some(catalog) = &self.catalog {
-                    for path in images_to_add_to_catalog {
-                        let catalog_clone = catalog.clone();
-
-                        add_tasks.push(Task::perform(
-                            async move {
-                                generate_preview_for_image(
-                                    path,
-                                    &catalog_clone,
-                                    false,
-                                )
-                                .await
-                            },
-                            Message::PreviewGenerated,
-                        ));
-                    }
-                } else {
-                    println!("[Cache Refresh] Step 2: Failed to perform adds. No catalog");
-                }
-
-                // deletes (For now we dont want to completely remove entry. Just set state)
-                println!(
-                    "[Cache Refresh] Step 2: Performing {} deletes",
-                    catalog_image_dos_to_delete.len(),
-                );
-                for image_do in catalog_image_dos_to_delete {
-                    if let Some(preview) = self.workspace_state.previews.get_mut(&image_do.hash) {
-                        preview.preview_state = PreviewState::OriginalMissing;
-                    } else {
-                        println!(
-                            "[Cache Refresh] Step 2: Failed to update preview state for imageDO {:?}",
-                            image_do
-                        );
-                    }
-                }
-
-                return Task::batch(add_tasks);
-            }
             Message::PreviewGenerated(result) => match result {
                 Ok(image_do) => {
                     if let Some(catalog) = &self.catalog {
-                        let catalog_clone = catalog.clone();
-                        let path =
-                            catalog_clone
-                                .root()
-                                .join(catalog_clone.cache_dir())
-                                .join(format!(
-                                    "{}.{}",
-                                    image_do.hash,
-                                    PREVIEW_FILE_TYPE.get_file_extension()
-                                ));
-                        self.workspace_state.previews.insert(
+                        let preview = Self::build_preview_from_image_do(catalog, &image_do);
+
+                        self.workspace_state.model.upsert_preview_key(
                             image_do.hash.clone(),
-                            Preview {
-                                path_to_original: PathBuf::from(image_do.path),
-                                hash: image_do.hash,
-                                img_handle: if path.exists() {
-                                    Some(Handle::from_path(path.clone()))
-                                } else {
-                                    None
-                                },
-                                preview_state: if path.exists() {
-                                    PreviewState::Ok
-                                } else {
-                                    PreviewState::OriginalMissing
-                                },
-                            },
+                            PathBuf::from(&image_do.path),
                         );
 
-                        Task::none()
-                    } else {
-                        Task::none()
+                        self.workspace_state
+                            .preview_cache
+                            .insert(image_do.hash.clone(), preview.clone());
+
+                        if let Some(selected) = self.navigator_state.selected.as_ref() {
+                            if preview.path_to_original.starts_with(selected) {
+                                self.workspace_state.previews.insert(image_do.hash, preview);
+                            }
+                        }
                     }
+
+                    Task::none()
                 }
                 Err(e) => {
                     println!("[Preview Generation] Failed with error: {}", e);
@@ -569,23 +532,21 @@ impl App {
                 }
             },
             Message::PreviewDataLoadedForImage(preview) => {
-                println!(
-                    "[Preview Loading] Step 2: Loaded preview data for image {}",
-                    preview.path_to_original.to_str().unwrap()
-                );
-                self.workspace_state
-                    .previews
-                    .insert(preview.hash.clone(), preview);
-                Task::none()
-            }
+                let hash = preview.hash.clone();
 
-            Message::ImageCountResult((path, count)) => {
-                println!(
-                    "[Counting task] Received result of {} for {}",
-                    count,
-                    path.to_str().unwrap()
-                );
-                self.navigator_state.image_counts.insert(path, count);
+                self.workspace_state
+                    .model
+                    .upsert_preview_key(hash.clone(), preview.path_to_original.clone());
+
+                self.workspace_state
+                    .preview_cache
+                    .insert(hash.clone(), preview.clone());
+
+                if let Some(selected) = self.navigator_state.selected.as_ref() {
+                    if preview.path_to_original.starts_with(selected) {
+                        self.workspace_state.previews.insert(hash, preview);
+                    }
+                }
 
                 Task::none()
             }
@@ -615,9 +576,8 @@ impl App {
     }
 
     fn theme(&self) -> iced::Theme {
-        // Base dark palette
         let palette = iced::theme::Palette {
-            background: iced::color!(0x1e1e24), // Slate-ish dark hue
+            background: iced::color!(0x1e1e24),
             text: iced::color!(0xb0b0b5),
             primary: iced::color!(0x4A90E2),
             success: iced::color!(0x4CAF50),
@@ -626,15 +586,10 @@ impl App {
         };
 
         iced::Theme::custom_with_fn("Maelstrom Dark", palette, |palette| {
-            // Let iced generate the standard variations for buttons, hover states, etc.
             let mut extended = iced::theme::palette::Extended::generate(palette);
 
-            // Override the backgrounds to be very close in luminance (Zed style)
-            // Center Stage (Darkest)
             extended.background.base.color = iced::color!(0x1d1e24);
-            // Sidebars (A tiny bit lighter)
             extended.background.weak.color = iced::color!(0x23252b);
-            // Control Panel (A tiny bit lighter than sidebars)
             extended.background.strong.color = iced::color!(0x2a2d34);
 
             extended
@@ -643,7 +598,6 @@ impl App {
 }
 
 fn main() -> iced::Result {
-    // 1. Configure the window to push content into the titlebar
     let window_settings = iced::window::Settings {
         platform_specific: iced::window::settings::PlatformSpecific {
             title_hidden: false,
@@ -653,7 +607,6 @@ fn main() -> iced::Result {
         ..Default::default()
     };
 
-    // 2. Launch the application
     iced::application(App::new, App::update, App::view)
         .theme(App::theme)
         .title("Maelstrom")
