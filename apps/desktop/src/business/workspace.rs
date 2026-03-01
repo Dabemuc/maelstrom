@@ -49,48 +49,6 @@ impl WorkspaceScanResult {
             direct_counts_by_folder,
         }
     }
-
-    /// Helper for incremental migration:
-    /// if only image paths are available, derive a minimal scan result.
-    ///
-    /// Note: this cannot discover truly empty folders because no directory walk
-    /// data is available.
-    pub fn from_image_paths(imported_roots: &[PathBuf], image_paths: Vec<PathBuf>) -> Self {
-        let mut all_folders: HashSet<PathBuf> = imported_roots.iter().cloned().collect();
-        let mut direct_counts_by_folder: HashMap<PathBuf, usize> = HashMap::new();
-
-        for image in &image_paths {
-            if let Some(parent) = image.parent() {
-                let parent_buf = parent.to_path_buf();
-                all_folders.insert(parent_buf.clone());
-                *direct_counts_by_folder.entry(parent_buf).or_insert(0) += 1;
-            }
-
-            for root in imported_roots {
-                if image.starts_with(root) {
-                    for ancestor in image.ancestors() {
-                        let ancestor_buf = ancestor.to_path_buf();
-                        if ancestor_buf == *root {
-                            all_folders.insert(ancestor_buf);
-                            break;
-                        }
-
-                        if ancestor_buf.starts_with(root) {
-                            all_folders.insert(ancestor_buf);
-                        } else {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        Self {
-            all_image_paths: image_paths,
-            all_folders,
-            direct_counts_by_folder,
-        }
-    }
 }
 
 /// Persistent workspace model that unifies:
@@ -119,17 +77,6 @@ impl WorkspaceModel {
         self.all_image_paths.clear();
         self.preview_cache.clear();
         self.previews_by_folder.clear();
-    }
-
-    /// Replaces folder/count model from a fresh scan in one pass.
-    pub fn apply_scan(&mut self, imported_roots: &[PathBuf], scan: WorkspaceScanResult) {
-        self.root_folders = imported_roots.to_vec();
-        self.all_image_paths = scan.all_image_paths;
-        self.folder_index = build_folder_index(
-            imported_roots,
-            scan.all_folders,
-            scan.direct_counts_by_folder,
-        );
     }
 
     /// Incrementally updates a single imported root with a fresh scan result.
@@ -176,42 +123,6 @@ impl WorkspaceModel {
             .retain(|folder, _| self.folder_index.contains_key(folder));
     }
 
-    pub fn total_count_for(&self, folder: &Path) -> usize {
-        self.folder_index
-            .get(folder)
-            .map(|n| n.total_image_count)
-            .unwrap_or(0)
-    }
-
-    pub fn direct_count_for(&self, folder: &Path) -> usize {
-        self.folder_index
-            .get(folder)
-            .map(|n| n.direct_image_count)
-            .unwrap_or(0)
-    }
-
-    pub fn children_for(&self, folder: &Path) -> Vec<PathBuf> {
-        self.folder_index
-            .get(folder)
-            .map(|n| n.children.clone())
-            .unwrap_or_default()
-    }
-
-    pub fn set_previews_by_folder<I>(&mut self, entries: I)
-    where
-        I: IntoIterator<Item = (PathBuf, PreviewKey)>,
-    {
-        self.previews_by_folder.clear();
-        for (folder, key) in entries {
-            self.previews_by_folder.entry(folder).or_default().push(key);
-        }
-
-        for keys in self.previews_by_folder.values_mut() {
-            keys.sort();
-            keys.dedup();
-        }
-    }
-
     pub fn upsert_preview_key(&mut self, key: PreviewKey, original_path: PathBuf) {
         self.preview_cache
             .insert(key.clone(), original_path.clone());
@@ -233,16 +144,6 @@ impl WorkspaceModel {
                 ancestor = next;
             }
         }
-    }
-
-    pub fn remove_preview_key(&mut self, key: &str) {
-        self.preview_cache.remove(key);
-
-        for keys in self.previews_by_folder.values_mut() {
-            keys.retain(|k| k != key);
-        }
-
-        self.previews_by_folder.retain(|_, keys| !keys.is_empty());
     }
 
     /// Returns cached preview keys for the selected folder.
@@ -332,44 +233,4 @@ fn is_within_root(path: &Path, root: &Path) -> bool {
 
 fn path_depth(path: &Path) -> usize {
     path.components().count()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn aggregates_direct_and_total_counts() {
-        let root = PathBuf::from("/photos");
-        let child = PathBuf::from("/photos/2024");
-        let grandchild = PathBuf::from("/photos/2024/trip");
-
-        let all_folders = HashSet::from([root.clone(), child.clone(), grandchild.clone()]);
-        let direct_counts = HashMap::from([(root.clone(), 1), (child.clone(), 2), (grandchild, 3)]);
-
-        let mut model = WorkspaceModel::default();
-        model.apply_scan(
-            std::slice::from_ref(&root),
-            WorkspaceScanResult::new(Vec::new(), all_folders, direct_counts),
-        );
-
-        assert_eq!(model.direct_count_for(&root), 1);
-        assert_eq!(model.total_count_for(&root), 6);
-        assert_eq!(model.total_count_for(&child), 5);
-    }
-
-    #[test]
-    fn keeps_preview_index_per_folder() {
-        let mut model = WorkspaceModel::default();
-
-        model.upsert_preview_key("h1".to_string(), PathBuf::from("/photos/a.jpg"));
-        model.upsert_preview_key("h2".to_string(), PathBuf::from("/photos/b.jpg"));
-
-        let keys = model.preview_keys_for_selected_folder(Path::new("/photos"));
-        assert_eq!(keys.len(), 2);
-
-        model.remove_preview_key("h1");
-        let keys_after = model.preview_keys_for_selected_folder(Path::new("/photos"));
-        assert_eq!(keys_after, vec!["h2".to_string()]);
-    }
 }
