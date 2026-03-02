@@ -8,7 +8,7 @@ use previews::preview_generation::PREVIEW_FILE_TYPE;
 
 use crate::app::App;
 use crate::business::workspace::WorkspaceScanResult;
-use crate::state::{Preview, PreviewState};
+use crate::state::workspace::{Image, Preview, PreviewState};
 
 /// Rebuilds `workspace_state.previews` from the persistent preview cache
 /// for the currently selected folder.
@@ -57,8 +57,10 @@ pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Pre
     ));
 
     Preview {
-        path_to_original: PathBuf::from(&image_do.path),
-        hash: image_do.hash.clone(),
+        original_image: Image {
+            path: PathBuf::from(&image_do.path),
+            hash: image_do.hash.clone(),
+        },
         img_handle: if path.exists() {
             Some(Handle::from_path(path.clone()))
         } else {

@@ -8,9 +8,14 @@ use iced::widget::image::Handle;
 use crate::business::workspace::WorkspaceModel;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Preview {
-    pub path_to_original: PathBuf,
+pub struct Image {
+    pub path: PathBuf,
     pub hash: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Preview {
+    pub original_image: Image,
     pub img_handle: Option<Handle>,
     pub preview_state: PreviewState,
 }
@@ -23,8 +28,8 @@ pub enum PreviewState {
 
 impl Hash for Preview {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.path_to_original.hash(state);
-        self.hash.hash(state);
+        self.original_image.path.hash(state);
+        self.original_image.hash.hash(state);
         self.preview_state.hash(state);
     }
 }
@@ -76,14 +81,14 @@ impl WorkspaceState {
                 let name_a = self
                     .previews
                     .get(a)
-                    .map(|p| p.path_to_original.file_name().unwrap_or_default())
+                    .map(|p| p.original_image.path.file_name().unwrap_or_default())
                     .unwrap_or_default()
                     .to_string_lossy()
                     .to_lowercase();
                 let name_b = self
                     .previews
                     .get(b)
-                    .map(|p| p.path_to_original.file_name().unwrap_or_default())
+                    .map(|p| p.original_image.path.file_name().unwrap_or_default())
                     .unwrap_or_default()
                     .to_string_lossy()
                     .to_lowercase();

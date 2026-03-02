@@ -125,7 +125,7 @@ fn library_view(state: &App) -> Element<'_, Message> {
                     r = r.push(
                         container(styled_tooltip(
                             img,
-                            pv.1.path_to_original.to_str().unwrap_or(""),
+                            pv.1.original_image.path.to_str().unwrap_or(""),
                             Position::Top,
                         ))
                         .width(Length::Fixed(CELL_SIZE))
