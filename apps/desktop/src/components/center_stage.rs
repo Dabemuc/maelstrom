@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use crate::app::App;
 use crate::components::common::styled_tooltip::styled_tooltip;
 use crate::components::divider::divider;
@@ -70,7 +68,19 @@ const CELL_SIZE: f32 = 150.0; // box width/height
 const SPACING: f32 = 10.0;
 
 fn library_view(state: &App) -> Element<'_, Message> {
-    let mut previews: Vec<_> = state.workspace_state.previews.iter().collect();
+    // Create a vector of preview references ordered by the sorted keys
+    let previews: Vec<(&String, &Preview)> = state
+        .workspace_state
+        .sorted_preview_keys
+        .iter()
+        .filter_map(|k| {
+            state
+                .workspace_state
+                .previews
+                .get(k)
+                .map(|preview| (k, preview))
+        })
+        .collect();
 
     column![
         row![

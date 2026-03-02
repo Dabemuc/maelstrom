@@ -28,7 +28,21 @@ pub fn handle_preview_generated(
 
                 if let Some(selected) = app.navigator_state.selected.as_ref() {
                     if preview.path_to_original.starts_with(selected) {
-                        app.workspace_state.previews.insert(image_do.hash, preview);
+                        app.workspace_state
+                            .previews
+                            .insert(image_do.hash.clone(), preview);
+
+                        // Add to sorted preview keys if not already present
+                        if !app
+                            .workspace_state
+                            .sorted_preview_keys
+                            .contains(&image_do.hash)
+                        {
+                            app.workspace_state.sorted_preview_keys.push(image_do.hash);
+                        }
+
+                        // Resort the previews
+                        app.workspace_state.sort_previews();
                     }
                 }
             }
@@ -55,7 +69,15 @@ pub fn handle_preview_data_loaded_for_image(app: &mut App, preview: Preview) -> 
 
     if let Some(selected) = app.navigator_state.selected.as_ref() {
         if preview.path_to_original.starts_with(selected) {
-            app.workspace_state.previews.insert(hash, preview);
+            app.workspace_state.previews.insert(hash.clone(), preview);
+
+            // Add to sorted preview keys if not already present
+            if !app.workspace_state.sorted_preview_keys.contains(&hash) {
+                app.workspace_state.sorted_preview_keys.push(hash);
+            }
+
+            // Resort the previews
+            app.workspace_state.sort_previews();
         }
     }
 

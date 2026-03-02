@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
+use std::time::Instant;
 
 use iced::widget::image::Handle;
 
@@ -50,12 +51,50 @@ pub struct WorkspaceState {
     // Persistent preview payload cache (hash -> Preview).
     pub preview_cache: HashMap<String, Preview>,
 
-    // Current render set for selected folder (kept for compatibility with existing center stage).
+    // Current render set for selected folder.
     pub previews: HashMap<String, Preview>,
-    // pub sorted_preview_keys: Vec<String>,
+
+    // Sorted preview keys for display ordering
+    pub sorted_preview_keys: Vec<String>,
 
     pub handle_to_missing_preview_placeholder: Handle,
 
     // State to hold sorting options as well as currently selected
     pub selected_sorting_option: SortingOption,
+}
+
+impl WorkspaceState {
+    /// Sort previews according to the selected sorting option
+    pub fn sort_previews(&mut self) {
+        println!(
+            "[Workspace State] Sorting previews by {}",
+            self.selected_sorting_option
+        );
+        let time_before_sort = Instant::now();
+        let cmp = match self.selected_sorting_option {
+            SortingOption::FileName => |a: &String, b: &String| {
+                let name_a = self
+                    .previews
+                    .get(a)
+                    .map(|p| p.path_to_original.file_name().unwrap_or_default())
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase();
+                let name_b = self
+                    .previews
+                    .get(b)
+                    .map(|p| p.path_to_original.file_name().unwrap_or_default())
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase();
+                name_a.cmp(&name_b)
+            },
+        };
+
+        self.sorted_preview_keys.sort_by(cmp);
+        println!(
+            "[Workspace State] Sorting took {}ms",
+            time_before_sort.elapsed().as_millis()
+        );
+    }
 }

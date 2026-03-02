@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use iced::widget::image::Handle;
-use io::catalog::catalog::Catalog;
 use io::catalog::ImageDO;
+use io::catalog::catalog::Catalog;
 use io::image_files::helpers::FolderScanResult;
 use previews::preview_generation::PREVIEW_FILE_TYPE;
 
@@ -14,6 +14,7 @@ use crate::state::{Preview, PreviewState};
 /// for the currently selected folder.
 pub fn refresh_selected_previews_from_cache(app: &mut App) {
     app.workspace_state.previews.clear();
+    app.workspace_state.sorted_preview_keys.clear();
 
     let Some(selected) = app.navigator_state.selected.as_ref() else {
         return;
@@ -25,9 +26,15 @@ pub fn refresh_selected_previews_from_cache(app: &mut App) {
         .preview_keys_for_selected_folder(selected)
     {
         if let Some(preview) = app.workspace_state.preview_cache.get(&key) {
-            app.workspace_state.previews.insert(key, preview.clone());
+            app.workspace_state
+                .previews
+                .insert(key.clone(), preview.clone());
+            app.workspace_state.sorted_preview_keys.push(key.clone());
         }
     }
+
+    // Sort the previews based on the current sorting option
+    app.workspace_state.sort_previews();
 }
 
 /// Converts a `FolderScanResult` (from the `io` crate) into a `WorkspaceScanResult`

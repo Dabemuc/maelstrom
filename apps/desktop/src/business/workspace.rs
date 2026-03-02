@@ -1,9 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use crate::state::Preview;
-use crate::state::workspace::SortingOption;
-
 pub type PreviewKey = String;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -237,15 +234,3 @@ fn is_within_root(path: &Path, root: &Path) -> bool {
 fn path_depth(path: &Path) -> usize {
     path.components().count()
 }
-
-// pub fn sort_previews(previews: &mut Vec<(&String, &Preview)>, sorting_option: SortingOption) {
-//     match sorting_option {
-//         SortingOption::FileName => {
-//             previews.sort_by(|a, b| {
-//                 let a_name = a.1.path_to_original.file_name().unwrap_or_default();
-//                 let b_name = b.1.path_to_original.file_name().unwrap_or_default();
-//                 a_name.cmp(b_name)
-//             });
-//         }
-//     }
-// }

@@ -6,7 +6,6 @@ use io::image_files::helpers::{FolderScanResult, scan_folder_images};
 
 use crate::app::App;
 use crate::message::Message;
-use crate::state::Preview;
 use crate::state::workspace::SortingOption;
 use crate::update::helpers::to_workspace_scan_result;
 
@@ -60,7 +59,8 @@ pub fn handle_sorting_option_selected(app: &mut App, option: SortingOption) -> T
     println!("Selected Sorting Option {}", option);
     app.workspace_state.selected_sorting_option = option;
 
-    // TODO
+    // Resort the previews
+    app.workspace_state.sort_previews();
 
     Task::none()
 }

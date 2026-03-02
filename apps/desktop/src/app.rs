@@ -65,6 +65,7 @@ impl App {
                 roots_scanning: HashSet::new(),
                 preview_cache: HashMap::new(),
                 previews: HashMap::new(),
+                sorted_preview_keys: Vec::new(),
                 handle_to_missing_preview_placeholder: Handle::from_bytes(
                     include_bytes!("../assets/static/image_missing.png").to_vec(),
                 ),
