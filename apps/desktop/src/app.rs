@@ -17,6 +17,7 @@ use crate::components::divider::divider;
 use crate::components::sidebar_left::{LeftSidebarMode, sidebar_left};
 use crate::components::sidebar_right::{RightSidebarMode, sidebar_right};
 use crate::message::Message;
+use crate::state::workspace::SortingOption;
 use crate::state::{NavigatorState, ViewMode, WorkspaceState};
 use crate::{theme, update};
 
@@ -67,6 +68,7 @@ impl App {
                 handle_to_missing_preview_placeholder: Handle::from_bytes(
                     include_bytes!("../assets/static/image_missing.png").to_vec(),
                 ),
+                selected_sorting_option: SortingOption::FileName,
             },
             selection_request_seq: 0,
             active_selection_request_id: None,

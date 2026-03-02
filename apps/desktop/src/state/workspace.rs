@@ -28,6 +28,19 @@ impl Hash for Preview {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SortingOption {
+    FileName,
+}
+
+impl std::fmt::Display for SortingOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::FileName => "Name",
+        })
+    }
+}
+
 pub struct WorkspaceState {
     pub model: WorkspaceModel,
 
@@ -39,6 +52,10 @@ pub struct WorkspaceState {
 
     // Current render set for selected folder (kept for compatibility with existing center stage).
     pub previews: HashMap<String, Preview>,
+    pub sorted_preview_keys: Vec<String>,
 
     pub handle_to_missing_preview_placeholder: Handle,
+
+    // State to hold sorting options as well as currently selected
+    pub selected_sorting_option: SortingOption,
 }
