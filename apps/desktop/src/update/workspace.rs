@@ -5,7 +5,6 @@ use iced::futures::channel::oneshot;
 use io::image_files::helpers::{FolderScanResult, scan_folder_images};
 
 use crate::app::App;
-use crate::business::workspace::sort_previews;
 use crate::message::Message;
 use crate::state::Preview;
 use crate::state::workspace::SortingOption;

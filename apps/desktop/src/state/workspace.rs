@@ -52,7 +52,7 @@ pub struct WorkspaceState {
 
     // Current render set for selected folder (kept for compatibility with existing center stage).
     pub previews: HashMap<String, Preview>,
-    pub sorted_preview_keys: Vec<String>,
+    // pub sorted_preview_keys: Vec<String>,
 
     pub handle_to_missing_preview_placeholder: Handle,
 
