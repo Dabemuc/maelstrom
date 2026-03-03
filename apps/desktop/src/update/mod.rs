@@ -2,6 +2,7 @@ pub mod catalog;
 pub mod helpers;
 pub mod import;
 pub mod navigator;
+pub mod pane_grid;
 pub mod preview;
 pub mod selection;
 pub mod sidebar;
@@ -16,6 +17,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
     match message {
         Message::LeftSidebarClicked(mode) => sidebar::handle_left_sidebar_clicked(app, mode),
         Message::RightSidebarClicked(mode) => sidebar::handle_right_sidebar_clicked(app, mode),
+        Message::PaneResized(event) => pane_grid::handle_pane_resized(app, event),
         Message::CreateCatalog => catalog::handle_create_catalog(app),
         Message::SelectCatalog => catalog::handle_select_catalog(app),
         Message::CatalogLoadAttempted(result) => {

@@ -11,6 +11,7 @@ pub fn handle_left_sidebar_clicked(app: &mut App, mode: LeftSidebarMode) -> Task
     } else {
         app.left_sidebar_mode = mode;
     }
+    app.rebuild_pane_grid();
     Task::none()
 }
 
@@ -20,5 +21,6 @@ pub fn handle_right_sidebar_clicked(app: &mut App, mode: RightSidebarMode) -> Ta
     } else {
         app.right_sidebar_mode = mode;
     }
+    app.rebuild_pane_grid();
     Task::none()
 }
