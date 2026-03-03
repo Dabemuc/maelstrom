@@ -4,7 +4,7 @@ use iced::widget::image::Handle;
 use io::catalog::ImageDO;
 use io::catalog::catalog::Catalog;
 use io::image_files::helpers::FolderScanResult;
-use io::metadata::metadata_extractor::Metadata;
+use io::metadata::metadata::Metadata;
 use previews::preview_generation::PREVIEW_FILE_TYPE;
 
 use crate::app::App;

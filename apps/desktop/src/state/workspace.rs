@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use iced::widget::image::Handle;
-use io::metadata::metadata_extractor::Metadata;
+use io::metadata::metadata::Metadata;
 
 use crate::business::workspace::WorkspaceModel;
 
