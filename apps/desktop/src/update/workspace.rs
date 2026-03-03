@@ -65,6 +65,18 @@ pub fn handle_sorting_option_selected(app: &mut App, option: SortingOption) -> T
     Task::none()
 }
 
+pub fn handle_sorting_direction_toggled(app: &mut App) -> Task<Message> {
+    app.workspace_state.sorting_direction =
+        app.workspace_state.sorting_direction.toggle();
+    println!(
+        "Sorting direction set to {:?}",
+        app.workspace_state.sorting_direction
+    );
+    app.workspace_state.sort_previews();
+
+    Task::none()
+}
+
 pub fn handle_preview_selected(app: &mut App, hash: String) -> Task<Message> {
     println!("Selected preview with hash {}", hash);
     app.workspace_state.selected_preview_hash = Some(hash);

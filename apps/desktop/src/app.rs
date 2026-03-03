@@ -7,17 +7,17 @@ use iced::widget::image::Handle;
 use iced::widget::{column, pane_grid};
 use iced::{Element, Length, Task};
 
-use io::catalog::catalog::{CATALOG_FILE_NAME, CATALOG_FOLDER_NAME, Catalog};
+use io::catalog::catalog::{Catalog, CATALOG_FILE_NAME, CATALOG_FOLDER_NAME};
 
 use crate::business::workspace::WorkspaceModel;
 use crate::components::center_stage::center_stage;
 use crate::components::control_panel_bottom::control_panel_bottom;
 use crate::components::control_panel_top::control_panel_top;
 use crate::components::divider::divider;
-use crate::components::sidebar_left::{LeftSidebarMode, sidebar_left};
-use crate::components::sidebar_right::{RightSidebarMode, sidebar_right};
+use crate::components::sidebar_left::{sidebar_left, LeftSidebarMode};
+use crate::components::sidebar_right::{sidebar_right, RightSidebarMode};
 use crate::message::Message;
-use crate::state::workspace::SortingOption;
+use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{NavigatorState, ViewMode, WorkspaceState};
 use crate::{theme, update};
 
@@ -84,6 +84,7 @@ impl App {
                     include_bytes!("../assets/static/image_missing.png").to_vec(),
                 ),
                 selected_sorting_option: SortingOption::FileName,
+                sorting_direction: SortingDirection::Descending,
                 selected_preview_hash: None,
             },
             selection_request_seq: 0,

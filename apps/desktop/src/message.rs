@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use iced::widget::pane_grid;
-use io::catalog::ImageDO;
 use io::catalog::catalog::Catalog;
 use io::catalog::catalog_error::CatalogError;
+use io::catalog::ImageDO;
 use io::image_files::helpers::FolderScanResult;
 use previews::preview_generation::PreviewGenerationError;
 
@@ -37,5 +37,6 @@ pub enum Message {
     PreviewDataLoadedForImage(Preview),
     PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
     SortingOptionSelected(SortingOption),
+    SortingDirectionToggled,
     PreviewSelected(String),
 }

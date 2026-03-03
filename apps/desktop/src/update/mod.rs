@@ -52,6 +52,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::SortingOptionSelected(option) => {
             workspace::handle_sorting_option_selected(app, option)
         }
+        Message::SortingDirectionToggled => workspace::handle_sorting_direction_toggled(app),
         Message::PreviewSelected(hash) => workspace::handle_preview_selected(app, hash),
     }
 }

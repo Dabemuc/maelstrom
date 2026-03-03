@@ -1,17 +1,19 @@
 use crate::components::common::styled_tooltip::styled_tooltip;
 use crate::message::Message;
-use iced::Length;
 use iced::widget::tooltip::Position;
 use iced::widget::{button, svg};
+use iced::Length;
 
 pub fn icon_button<'a>(
     handle: svg::Handle,
     label: &'a str,
     is_active: bool,
+    rotation_radians: f32,
 ) -> iced::widget::Button<'a, Message> {
     let icon = svg(handle)
         .width(Length::Fixed(16.0))
         .height(Length::Fixed(16.0))
+        .rotation(rotation_radians)
         .style(move |theme: &iced::Theme, _status| {
             let palette = theme.extended_palette();
             iced::widget::svg::Style {

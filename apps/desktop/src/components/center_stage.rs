@@ -1,15 +1,16 @@
 use crate::app::App;
 use crate::components::common::styled_tooltip::styled_tooltip;
+use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::message::Message;
-use crate::state::workspace::SortingOption;
+use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{Preview, PreviewState, ViewMode};
-use iced::Alignment::Center;
 use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
 use iced::widget::{
-    Space, button, column, container, image, pick_list, responsive, row, scrollable, text,
+    button, column, container, image, pick_list, responsive, row, scrollable, svg, text, Space,
 };
+use iced::Alignment::Center;
 use iced::{Alignment, Element, Length};
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
@@ -91,9 +92,23 @@ fn library_view(state: &App) -> Element<'_, Message> {
                 Some(&state.workspace_state.selected_sorting_option),
                 Message::SortingOptionSelected
             )
-            .placeholder(state.workspace_state.selected_sorting_option.to_string())
+            .placeholder(state.workspace_state.selected_sorting_option.to_string()),
+            icon_button(
+                svg::Handle::from_memory(include_bytes!("../../assets/icons/sort.svg")),
+                match state.workspace_state.sorting_direction {
+                    SortingDirection::Descending => "Sort: Descending",
+                    SortingDirection::Ascending => "Sort: Ascending",
+                },
+                true,
+                match state.workspace_state.sorting_direction {
+                    SortingDirection::Descending => 0.0,
+                    SortingDirection::Ascending => std::f32::consts::PI,
+                }
+            )
+            .on_press(Message::SortingDirectionToggled)
         ]
         .padding(10)
+        .spacing(8)
         .align_y(Center),
         divider(false),
         scrollable(responsive(move |size| {

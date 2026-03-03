@@ -46,6 +46,21 @@ pub enum SortingOption {
     CaptureDate,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SortingDirection {
+    Ascending,
+    Descending,
+}
+
+impl SortingDirection {
+    pub fn toggle(self) -> Self {
+        match self {
+            Self::Ascending => Self::Descending,
+            Self::Descending => Self::Ascending,
+        }
+    }
+}
+
 impl std::fmt::Display for SortingOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
@@ -74,6 +89,7 @@ pub struct WorkspaceState {
 
     // State to hold sorting options as well as currently selected
     pub selected_sorting_option: SortingOption,
+    pub sorting_direction: SortingDirection,
 
     // Currently selected preview hash
     pub selected_preview_hash: Option<String>,
@@ -130,7 +146,14 @@ impl WorkspaceState {
             }
         };
 
-        self.sorted_preview_keys.sort_by(cmp);
+        let direction = self.sorting_direction;
+        self.sorted_preview_keys.sort_by(|a, b| {
+            let ordering = cmp(a, b);
+            match direction {
+                SortingDirection::Ascending => ordering,
+                SortingDirection::Descending => ordering.reverse(),
+            }
+        });
         println!(
             "[Workspace State] Sorting took {}ms",
             time_before_sort.elapsed().as_millis()
