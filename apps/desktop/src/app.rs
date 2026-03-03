@@ -70,6 +70,7 @@ impl App {
                     include_bytes!("../assets/static/image_missing.png").to_vec(),
                 ),
                 selected_sorting_option: SortingOption::FileName,
+                selected_preview_hash: None,
             },
             selection_request_seq: 0,
             active_selection_request_id: None,

@@ -35,4 +35,5 @@ pub enum Message {
     PreviewDataLoadedForImage(Preview),
     PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
     SortingOptionSelected(SortingOption),
+    PreviewSelected(String),
 }

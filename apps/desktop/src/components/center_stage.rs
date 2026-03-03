@@ -122,16 +122,18 @@ fn library_view(state: &App) -> Element<'_, Message> {
                     .width(Length::Fixed(CELL_SIZE))
                     .height(Length::Fixed(CELL_SIZE));
 
-                    r = r.push(
-                        container(styled_tooltip(
-                            img,
-                            pv.1.original_image.path.to_str().unwrap_or(""),
-                            Position::Top,
-                        ))
-                        .width(Length::Fixed(CELL_SIZE))
-                        .height(Length::Fixed(CELL_SIZE))
-                        .padding(10),
-                    );
+                    // Simple approach - just add the click handler without complex styling
+                    let button = button(styled_tooltip(
+                        img,
+                        pv.1.original_image.path.to_str().unwrap_or(""),
+                        Position::Top,
+                    ))
+                    .on_press(Message::PreviewSelected(pv.0.clone()))
+                    .width(Length::Fixed(CELL_SIZE))
+                    .height(Length::Fixed(CELL_SIZE))
+                    .padding(10);
+
+                    r = r.push(button);
                 }
 
                 col = col.push(r);
