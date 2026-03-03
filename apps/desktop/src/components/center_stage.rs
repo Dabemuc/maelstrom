@@ -87,7 +87,7 @@ fn library_view(state: &App) -> Element<'_, Message> {
             Space::new().width(Length::Fill),
             text("Sort by"),
             pick_list(
-                vec![SortingOption::FileName],
+                vec![SortingOption::FileName, SortingOption::CaptureDate],
                 Some(&state.workspace_state.selected_sorting_option),
                 Message::SortingOptionSelected
             )
@@ -122,16 +122,52 @@ fn library_view(state: &App) -> Element<'_, Message> {
                     .width(Length::Fixed(CELL_SIZE))
                     .height(Length::Fixed(CELL_SIZE));
 
-                    r = r.push(
-                        container(styled_tooltip(
-                            img,
-                            pv.1.path_to_original.to_str().unwrap_or(""),
-                            Position::Top,
-                        ))
+                    // Create the tooltip container
+                    let tooltip_container = styled_tooltip(
+                        img,
+                        pv.1.original_image.path.to_str().unwrap_or(""),
+                        Position::Top,
+                    );
+
+                    // Create button with invisible styling
+                    let button = button(tooltip_container)
+                        .on_press(Message::PreviewSelected(pv.0.clone()))
                         .width(Length::Fixed(CELL_SIZE))
                         .height(Length::Fixed(CELL_SIZE))
-                        .padding(10),
-                    );
+                        .padding(10)
+                        .style(
+                            |theme: &iced::Theme, status: iced::widget::button::Status| {
+                                let mut style = iced::widget::button::text(theme, status);
+                                // Make button completely transparent
+                                style.background =
+                                    Some(iced::Background::Color(iced::Color::TRANSPARENT));
+                                style.border = iced::Border::default();
+                                style
+                            },
+                        );
+
+                    // Apply selection highlighting if needed
+                    if let Some(ref selected_hash) = state.workspace_state.selected_preview_hash {
+                        if selected_hash == pv.0 {
+                            // Apply highlighting for selected item
+                            r = r.push(
+                                container(button)
+                                    .width(Length::Fixed(CELL_SIZE))
+                                    .height(Length::Fixed(CELL_SIZE))
+                                    .padding(2)
+                                    .style(|_theme: &iced::Theme| container::Style {
+                                        background: Some(
+                                            iced::Color::from_rgba(0.0, 0.0, 0.0, 0.2).into(),
+                                        ),
+                                        ..container::Style::default()
+                                    }),
+                            );
+                        } else {
+                            r = r.push(button);
+                        }
+                    } else {
+                        r = r.push(button);
+                    }
                 }
 
                 col = col.push(r);
