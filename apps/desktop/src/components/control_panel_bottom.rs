@@ -25,11 +25,17 @@ pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
 
     let right_controls = row![
         icon_button(
+            svg::Handle::from_memory(include_bytes!("../../assets/icons/metadata.svg")),
+            "Metadata",
+            state.right_sidebar_mode == RightSidebarMode::Metadata
+        )
+        .on_press(Message::RightSidebarClicked(RightSidebarMode::Metadata)),
+        icon_button(
             svg::Handle::from_memory(include_bytes!("../../assets/icons/edit.svg")),
             "Develop",
-            state.right_sidebar_mode == RightSidebarMode::Develop
+            state.right_sidebar_mode == RightSidebarMode::Operations
         )
-        .on_press(Message::RightSidebarClicked(RightSidebarMode::Develop)),
+        .on_press(Message::RightSidebarClicked(RightSidebarMode::Operations)),
     ]
     .spacing(10);
 

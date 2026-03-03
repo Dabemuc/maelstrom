@@ -9,7 +9,8 @@ use iced::{Element, Length};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RightSidebarMode {
-    Develop,
+    Metadata,
+    Operations,
     Hidden,
 }
 
@@ -17,9 +18,24 @@ pub fn sidebar_right(state: &App) -> Element<'_, Message> {
     let content = row![
         divider(true),
         Scrollable::new(match state.view_mode {
-            ViewMode::Library => library_view(state),
-            ViewMode::Develop => develop_views(state),
-            _ => text("Select an image and enter develop mode to view develop options").into(),
+            ViewMode::Library => match state.right_sidebar_mode {
+                RightSidebarMode::Metadata => metadata_view(state),
+                _ => text(format!(
+                    "No view for view mode {:?} and right sidebar mode {:?}",
+                    state.view_mode, state.right_sidebar_mode
+                ))
+                .into(),
+            },
+
+            ViewMode::Develop => match state.right_sidebar_mode {
+                RightSidebarMode::Operations => operations_view(state),
+                _ => text(format!(
+                    "No view for view mode {:?} and right sidebar mode {:?}",
+                    state.view_mode, state.right_sidebar_mode
+                ))
+                .into(),
+            },
+            _ => text(format!("No view for view mode {:?}", state.view_mode)).into(),
         })
         .width(Length::Fill)
         .height(Length::Fill)
@@ -40,11 +56,11 @@ pub fn sidebar_right(state: &App) -> Element<'_, Message> {
         .into()
 }
 
-fn develop_views(_state: &App) -> Element<'_, Message> {
+fn operations_view(_state: &App) -> Element<'_, Message> {
     text("Develop views placeholder").into()
 }
 
-fn library_view(state: &App) -> Element<'_, Message> {
+fn metadata_view(state: &App) -> Element<'_, Message> {
     text(format!(
         "{:#?}",
         state
