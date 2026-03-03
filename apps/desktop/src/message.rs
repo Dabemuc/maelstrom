@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
-use io::catalog::ImageDO;
-use io::catalog::catalog_error::CatalogError;
-use io::image_files::helpers::FolderScanResult;
+use iced::widget::pane_grid;
 use io::catalog::catalog::Catalog;
+use io::catalog::catalog_error::CatalogError;
+use io::catalog::ImageDO;
+use io::image_files::helpers::FolderScanResult;
 use previews::preview_generation::PreviewGenerationError;
 
 use crate::components::sidebar_left::LeftSidebarMode;
@@ -14,6 +15,7 @@ use crate::state::{Preview, SelectionDiffData};
 pub enum Message {
     LeftSidebarClicked(LeftSidebarMode),
     RightSidebarClicked(RightSidebarMode),
+    PaneResized(pane_grid::ResizeEvent),
     CreateCatalog,
     SelectCatalog,
     CatalogLoadAttempted(Result<Catalog, CatalogError>),
