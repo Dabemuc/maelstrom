@@ -3,11 +3,11 @@ use crate::business::workspace::FolderNode;
 use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::message::Message;
-use iced::Alignment::Center;
 use iced::alignment::Horizontal::Right;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, Scrollbar};
-use iced::widget::{Space, button, column, container, mouse_area, row, svg, text};
+use iced::widget::{button, column, container, mouse_area, responsive, row, svg, text, Space};
+use iced::Alignment::Center;
 use iced::{Element, Length};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -31,10 +31,12 @@ pub fn sidebar_left(state: &App) -> Element<'_, Message> {
         .align_x(Center)
         .align_y(Center),
         divider(true)
-    ];
+    ]
+    .width(Length::Fill)
+    .height(Length::Fill);
 
     container(content)
-        .width(300)
+        .width(Length::Fill)
         .height(Length::Fill)
         .style(|theme: &iced::Theme| {
             let palette = theme.extended_palette();
@@ -58,73 +60,85 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
         state.workspace_state.model.root_folders.clone()
     };
 
-    let mut tree_col = column![];
+    responsive(move |size| {
+        let mut tree_col = column![];
 
-    for root in roots {
-        let is_scanning = state.workspace_state.roots_scanning.contains(&root);
+        for root in roots.iter() {
+            let is_scanning = state.workspace_state.roots_scanning.contains(root);
 
-        tree_col = if is_scanning {
-            tree_col
-                .push(build_loading_root_row(
-                    &root,
-                    0,
-                    &state.navigator_state.context_menu_root,
-                    state.navigator_state.context_menu_open,
-                    true,
-                ))
-                .push(divider(false))
-        } else {
-            tree_col
-                .push(build_folder_tree(
-                    &root,
-                    &state.navigator_state.expanded,
-                    &state.navigator_state.selected,
-                    &state.workspace_state.model.folder_index,
-                    &state.navigator_state.context_menu_root,
-                    state.navigator_state.context_menu_open,
-                    0,
-                ))
-                .push(divider(false))
-        };
-    }
+            tree_col = if is_scanning {
+                tree_col
+                    .push(build_loading_root_row(
+                        root,
+                        0,
+                        &state.navigator_state.context_menu_root,
+                        state.navigator_state.context_menu_open,
+                        true,
+                    ))
+                    .push(divider(false))
+            } else {
+                tree_col
+                    .push(build_folder_tree(
+                        root,
+                        &state.navigator_state.expanded,
+                        &state.navigator_state.selected,
+                        &state.workspace_state.model.folder_index,
+                        &state.navigator_state.context_menu_root,
+                        state.navigator_state.context_menu_open,
+                        0,
+                    ))
+                    .push(divider(false))
+            };
+        }
 
-    let tree_scroll = iced::widget::Scrollable::new(
-        iced::widget::Scrollable::new(tree_col).direction(Direction::Horizontal(Scrollbar::new())),
-    )
-    .direction(Direction::Vertical(Scrollbar::new()))
-    .height(Length::Fill);
+        let pane_width = size.width.max(1.0);
+        let tree_scroll = iced::widget::Scrollable::new(
+            iced::widget::Scrollable::new(tree_col.width(Length::Fixed(pane_width)))
+                .direction(Direction::Horizontal(Scrollbar::new()))
+                .width(Length::Fixed(pane_width)),
+        )
+        .direction(Direction::Vertical(Scrollbar::new()))
+        .width(Length::Fixed(pane_width))
+        .height(Length::Fill);
 
-    let content = column![
-        row![
-            container(text("Imported Folders").width(Length::Shrink))
-                .padding(10)
-                .align_y(Center)
-                .clip(true),
-            Space::new().width(Length::Fill),
+        let content = column![
             row![
-                icon_button(
-                    svg::Handle::from_memory(include_bytes!("../../assets/icons/collapse.svg")),
-                    "Collapse all",
-                    false
-                )
-                .on_press(Message::NavigatorCollapseAll),
-                icon_button(
-                    svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
-                    "Import new folder",
-                    false
-                )
-                .on_press(Message::ImportDirectory)
+                container(text("Imported Folders").width(Length::Shrink))
+                    .padding(10)
+                    .align_y(Center)
+                    .clip(true),
+                Space::new().width(Length::Fill),
+                row![
+                    icon_button(
+                        svg::Handle::from_memory(include_bytes!("../../assets/icons/collapse.svg")),
+                        "Collapse all",
+                        false
+                    )
+                    .on_press(Message::NavigatorCollapseAll),
+                    icon_button(
+                        svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
+                        "Import new folder",
+                        false
+                    )
+                    .on_press(Message::ImportDirectory)
+                ]
             ]
+            .align_y(Center)
+            .width(Length::Fixed(pane_width)),
+            divider(false),
+            container(tree_scroll)
+                .width(Length::Fixed(pane_width))
+                .height(Length::Fill)
         ]
-        .align_y(Center)
-        .width(300),
-        divider(false),
-        tree_scroll
-    ]
-    .width(Length::Shrink)
-    .height(Length::Fill);
+        .width(Length::Fixed(pane_width))
+        .height(Length::Fill);
 
-    content.into()
+        container(content)
+            .width(Length::Fixed(pane_width))
+            .height(Length::Fill)
+            .into()
+    })
+    .into()
 }
 
 fn build_loading_root_row(
@@ -164,7 +178,7 @@ fn build_loading_root_row(
     ]
     .spacing(8)
     .height(Length::Fill)
-    .width(235)
+    .width(Length::Fill)
     .align_y(Center);
 
     let root_row = container(
@@ -173,9 +187,11 @@ fn build_loading_root_row(
             row_content,
             Space::new().width(Length::Fixed(15.0)),
         ]
-        .height(Length::Fill),
+        .height(Length::Fill)
+        .width(Length::Fill),
     )
     .height(32)
+    .width(Length::Fill)
     .padding([0, 8])
     .style(|_theme: &iced::Theme| container::Style {
         text_color: Some(iced::Color::from_rgba8(140, 140, 140, 1.0)),
@@ -219,7 +235,11 @@ fn build_folder_tree(
     let has_children = node.map(|n| !n.children.is_empty()).unwrap_or(false);
 
     let icon = if has_children {
-        if is_expanded { "▼" } else { "▶" }
+        if is_expanded {
+            "▼"
+        } else {
+            "▶"
+        }
     } else {
         "•"
     };
@@ -268,17 +288,19 @@ fn build_folder_tree(
     ]
     .spacing(8)
     .height(Length::Fill)
-    .width(235)
+    .width(Length::Fill)
     .align_y(Center);
 
     let row = row![
         Space::new().width(Length::Fixed(indent as f32)),
         row_content,
         Space::new().width(Length::Fixed(15.0)),
-    ];
+    ]
+    .width(Length::Fill);
 
     let selectable_row = button(row)
         .height(32)
+        .width(Length::Fill)
         .padding([0, 8])
         .on_press(Message::SelectDirectory(path.clone()))
         .style(folder_row_style(is_selected));
