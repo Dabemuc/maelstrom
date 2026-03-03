@@ -5,7 +5,7 @@ use crate::components::divider::divider;
 use crate::message::Message;
 use iced::alignment::Horizontal::Right;
 use iced::border::Radius;
-use iced::widget::scrollable::{Direction, Scrollbar};
+use iced::widget::scrollable::Scrollbar;
 use iced::widget::{button, column, container, mouse_area, responsive, row, svg, text, Space};
 use iced::Alignment::Center;
 use iced::{Element, Length};
@@ -92,14 +92,12 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
         }
 
         let pane_width = size.width.max(1.0);
-        let tree_scroll = iced::widget::Scrollable::new(
-            iced::widget::Scrollable::new(tree_col.width(Length::Fixed(pane_width)))
-                .direction(Direction::Horizontal(Scrollbar::new()))
-                .width(Length::Fixed(pane_width)),
-        )
-        .direction(Direction::Vertical(Scrollbar::new()))
-        .width(Length::Fixed(pane_width))
-        .height(Length::Fill);
+        let tree_scroll = iced::widget::Scrollable::new(tree_col.width(Length::Fixed(pane_width)))
+            .direction(iced::widget::scrollable::Direction::Vertical(
+                Scrollbar::new(),
+            ))
+            .width(Length::Fixed(pane_width))
+            .height(Length::Fill);
 
         let content = column![
             row![

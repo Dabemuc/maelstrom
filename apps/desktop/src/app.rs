@@ -135,6 +135,7 @@ impl App {
             })
         })
         .on_resize(8, Message::PaneResized)
+        .min_size(200)
         .height(Length::Fill);
 
         column![
