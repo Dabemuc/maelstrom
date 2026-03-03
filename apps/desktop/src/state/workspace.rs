@@ -70,6 +70,9 @@ pub struct WorkspaceState {
 
     // State to hold sorting options as well as currently selected
     pub selected_sorting_option: SortingOption,
+
+    // Currently selected preview hash
+    pub selected_preview_hash: Option<String>,
 }
 
 impl WorkspaceState {
