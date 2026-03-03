@@ -87,7 +87,7 @@ fn library_view(state: &App) -> Element<'_, Message> {
             Space::new().width(Length::Fill),
             text("Sort by"),
             pick_list(
-                vec![SortingOption::FileName],
+                vec![SortingOption::FileName, SortingOption::CaptureDate],
                 Some(&state.workspace_state.selected_sorting_option),
                 Message::SortingOptionSelected
             )

@@ -4,11 +4,13 @@ use iced::widget::image::Handle;
 use io::catalog::ImageDO;
 use io::catalog::catalog::Catalog;
 use io::image_files::helpers::FolderScanResult;
+use io::metadata::metadata_extractor::Metadata;
 use previews::preview_generation::PREVIEW_FILE_TYPE;
 
 use crate::app::App;
 use crate::business::workspace::WorkspaceScanResult;
-use crate::state::workspace::{Image, Preview, PreviewState};
+use crate::state::workspace::Image;
+use crate::state::{Preview, PreviewState};
 
 /// Rebuilds `workspace_state.previews` from the persistent preview cache
 /// for the currently selected folder.
@@ -56,10 +58,19 @@ pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Pre
         PREVIEW_FILE_TYPE.get_file_extension()
     ));
 
+    let meta = match Metadata::read_exif(&PathBuf::from(&image_do.path)) {
+        Ok(res) => Some(res),
+        Err(e) => {
+            eprintln!("[Preview Build] error when reading exif meta: {:#?}", e);
+            None
+        }
+    };
+
     Preview {
         original_image: Image {
             path: PathBuf::from(&image_do.path),
             hash: image_do.hash.clone(),
+            meta: meta,
         },
         img_handle: if path.exists() {
             Some(Handle::from_path(path.clone()))
