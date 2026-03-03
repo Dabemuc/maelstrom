@@ -13,6 +13,10 @@ pub struct Image {
     pub path: PathBuf,
     pub hash: String,
     pub meta: Option<Metadata>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub file_size: Option<u64>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

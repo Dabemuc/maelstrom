@@ -1,11 +1,16 @@
+use std::fs;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use iced::widget::image::Handle;
-use io::catalog::ImageDO;
+use image::image_dimensions;
 use io::catalog::catalog::Catalog;
+use io::catalog::ImageDO;
 use io::image_files::helpers::FolderScanResult;
 use io::metadata::metadata::Metadata;
 use previews::preview_generation::PREVIEW_FILE_TYPE;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 
 use crate::app::App;
 use crate::business::workspace::WorkspaceScanResult;
@@ -58,7 +63,8 @@ pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Pre
         PREVIEW_FILE_TYPE.get_file_extension()
     ));
 
-    let meta = match Metadata::read_exif(&PathBuf::from(&image_do.path)) {
+    let image_path = PathBuf::from(&image_do.path);
+    let meta = match Metadata::read_exif(&image_path) {
         Ok(res) => Some(res),
         Err(e) => {
             eprintln!("[Preview Build] error when reading exif meta: {:#?}", e);
@@ -66,11 +72,27 @@ pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Pre
         }
     };
 
+    let (width, height) = image_dimensions(&image_path)
+        .map(|(w, h)| (Some(w), Some(h)))
+        .unwrap_or((None, None));
+
+    let file_size = fs::metadata(&image_path)
+        .map(|meta| Some(meta.len()))
+        .unwrap_or(None);
+    let created_at = fs::metadata(&image_path)
+        .ok()
+        .and_then(|meta| meta.created().ok())
+        .and_then(format_system_time);
+
     Preview {
         original_image: Image {
-            path: PathBuf::from(&image_do.path),
+            path: image_path,
             hash: image_do.hash.clone(),
             meta: meta,
+            width,
+            height,
+            file_size,
+            created_at,
         },
         img_handle: if path.exists() {
             Some(Handle::from_path(path.clone()))
@@ -83,4 +105,8 @@ pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Pre
             PreviewState::OriginalMissing
         },
     }
+}
+
+fn format_system_time(time: SystemTime) -> Option<String> {
+    OffsetDateTime::from(time).format(&Rfc3339).ok()
 }

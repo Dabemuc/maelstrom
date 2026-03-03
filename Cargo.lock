@@ -1048,9 +1048,11 @@ dependencies = [
  "core",
  "dirs",
  "iced",
+ "image 0.25.9",
  "io",
  "previews",
  "rfd",
+ "time",
  "tokio",
 ]
 
