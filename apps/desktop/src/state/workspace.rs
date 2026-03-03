@@ -87,41 +87,48 @@ impl WorkspaceState {
             self.selected_sorting_option
         );
         let time_before_sort = Instant::now();
-        let cmp: Box<dyn Fn(&String, &String) -> std::cmp::Ordering> =
-            match self.selected_sorting_option {
-                SortingOption::FileName => Box::new(|a: &String, b: &String| {
-                    let name_a = self
-                        .previews
-                        .get(a)
-                        .map(|p| p.original_image.path.file_name().unwrap_or_default())
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .to_lowercase();
-                    let name_b = self
-                        .previews
-                        .get(b)
-                        .map(|p| p.original_image.path.file_name().unwrap_or_default())
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .to_lowercase();
-                    name_a.cmp(&name_b)
-                }),
-                SortingOption::CaptureDate => Box::new(|a: &String, b: &String| {
-                    let date_a = self
-                        .previews
-                        .get(a)
-                        .and_then(|p| p.original_image.meta.as_ref()?.capture_date.as_deref())
-                        .unwrap_or("");
+        let cmp: Box<dyn Fn(&String, &String) -> std::cmp::Ordering> = match self
+            .selected_sorting_option
+        {
+            SortingOption::FileName => Box::new(|a: &String, b: &String| {
+                let name_a = self
+                    .previews
+                    .get(a)
+                    .map(|p| p.original_image.path.file_name().unwrap_or_default())
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase();
+                let name_b = self
+                    .previews
+                    .get(b)
+                    .map(|p| p.original_image.path.file_name().unwrap_or_default())
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase();
+                name_a.cmp(&name_b)
+            }),
+            SortingOption::CaptureDate => {
+                let previews = &self.previews;
 
-                    let date_b = self
-                        .previews
-                        .get(b)
-                        .and_then(|p| p.original_image.meta.as_ref()?.capture_date.as_deref())
-                        .unwrap_or("");
+                Box::new(move |a: &String, b: &String| {
+                    let get_date = |hash: &String| {
+                        previews
+                            .get(hash)
+                            // Check for capture date first
+                            .and_then(|p| p.original_image.meta.as_ref()?.capture_date.as_deref())
+                            // Else use create date
+                            .or_else(|| {
+                                previews
+                                    .get(hash)
+                                    .and_then(|p| p.original_image.created_at.as_deref())
+                            })
+                            .unwrap_or("")
+                    };
 
-                    date_a.cmp(date_b)
-                }),
-            };
+                    get_date(a).cmp(get_date(b))
+                })
+            }
+        };
 
         self.sorted_preview_keys.sort_by(cmp);
         println!(
