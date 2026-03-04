@@ -9,12 +9,16 @@ const CATALOG_VERSION: u16 = 1;
 pub const CATALOG_FILE_NAME: &str = "catalog.mcat";
 pub const CATALOG_FOLDER_NAME: &str = "maelstrom_catalog";
 pub const CACHE_DIR_NAME: &str = "cache";
+pub const PREVIEW_CACHE_DIR_NAME: &str = "previews";
+pub const DEVELOP_CACHE_DIR_NAME: &str = "develop";
 
 #[derive(Clone)]
 pub struct Catalog {
     db: Arc<TursoDB>,
     root: PathBuf,
     cache_dir: PathBuf,
+    preview_cache_dir: PathBuf,
+    develop_cache_dir: PathBuf,
 }
 
 impl Catalog {
@@ -23,6 +27,8 @@ impl Catalog {
     /// - directory exists
     /// - catalog.mcat exists
     /// - cache/ exists
+    /// - cache/previews/ exists
+    /// - cache/develop/ exists
     /// - version matches
     pub async fn load(folder: impl AsRef<Path>) -> Result<Self, CatalogError> {
         let folder_ref = folder.as_ref();
@@ -33,6 +39,8 @@ impl Catalog {
 
         let catalog_path = folder_ref.join(CATALOG_FILE_NAME);
         let cache_dir = folder_ref.join(CACHE_DIR_NAME);
+        let preview_cache_dir = cache_dir.join(PREVIEW_CACHE_DIR_NAME);
+        let develop_cache_dir = cache_dir.join(DEVELOP_CACHE_DIR_NAME);
 
         if !catalog_path.is_file() {
             return Err(CatalogError::MissingCatalogFile(catalog_path));
@@ -40,6 +48,14 @@ impl Catalog {
 
         if !cache_dir.is_dir() {
             return Err(CatalogError::MissingCacheDirectory(cache_dir));
+        }
+
+        if !preview_cache_dir.is_dir() {
+            return Err(CatalogError::MissingCacheDirectory(preview_cache_dir));
+        }
+
+        if !develop_cache_dir.is_dir() {
+            return Err(CatalogError::MissingCacheDirectory(develop_cache_dir));
         }
 
         let path_str = catalog_path
@@ -60,6 +76,8 @@ impl Catalog {
                 db: Arc::new(db),
                 root: folder_ref.to_path_buf(),
                 cache_dir,
+                preview_cache_dir,
+                develop_cache_dir,
             }),
             Some(v) => Err(CatalogError::VersionMismatch {
                 expected: CATALOG_VERSION,
@@ -74,6 +92,8 @@ impl Catalog {
     /// <base>/maelstrom_catalog/
     ///   catalog.mcat
     ///   cache/
+    ///     previews/
+    ///     develop/
     pub async fn create(base_folder: impl AsRef<Path>) -> Result<Self, CatalogError> {
         let base_ref = base_folder.as_ref();
 
@@ -93,9 +113,13 @@ impl Catalog {
 
         let catalog_path = root.join(CATALOG_FILE_NAME);
         let cache_dir = root.join(CACHE_DIR_NAME);
+        let preview_cache_dir = cache_dir.join(PREVIEW_CACHE_DIR_NAME);
+        let develop_cache_dir = cache_dir.join(DEVELOP_CACHE_DIR_NAME);
 
-        // Create cache directory
+        // Create cache directories
         fs::create_dir(&cache_dir).map_err(|e| CatalogError::FileSystem(e.to_string()))?;
+        fs::create_dir(&preview_cache_dir).map_err(|e| CatalogError::FileSystem(e.to_string()))?;
+        fs::create_dir(&develop_cache_dir).map_err(|e| CatalogError::FileSystem(e.to_string()))?;
 
         let path_str = catalog_path
             .to_str()
@@ -113,6 +137,8 @@ impl Catalog {
             db: Arc::new(db),
             root,
             cache_dir,
+            preview_cache_dir,
+            develop_cache_dir,
         })
     }
 
@@ -122,6 +148,14 @@ impl Catalog {
 
     pub fn cache_dir(&self) -> &Path {
         &self.cache_dir
+    }
+
+    pub fn preview_cache_dir(&self) -> &Path {
+        &self.preview_cache_dir
+    }
+
+    pub fn develop_cache_dir(&self) -> &Path {
+        &self.develop_cache_dir
     }
 
     /// Imports a directory path into the catalog.

@@ -4,7 +4,7 @@ use graph::{graph::Graph, node::Backend};
 use io::{
     catalog::{
         ImageDO,
-        catalog::{CACHE_DIR_NAME, Catalog},
+        catalog::Catalog,
         catalog_error::CatalogError,
     },
     image_files::supported_image_file_types::{SaveOptions, SupportedFileTypes},
@@ -107,7 +107,7 @@ pub async fn generate_preview_for_image(
     );
 
     // 8. Save preview using hash as filename
-    let preview_path_buf = catalog.root().join(CACHE_DIR_NAME).join(format!(
+    let preview_path_buf = catalog.preview_cache_dir().join(format!(
         "{}.{}",
         content_hash,
         PREVIEW_FILE_TYPE.get_file_extension()

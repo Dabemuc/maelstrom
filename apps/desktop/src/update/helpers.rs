@@ -57,7 +57,7 @@ pub fn to_workspace_scan_result(scan_result: &FolderScanResult) -> WorkspaceScan
 /// Builds a `Preview` from a catalog `ImageDO`, resolving the cached preview
 /// file path and determining whether the original is present.
 pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Preview {
-    let path = catalog.root().join(catalog.cache_dir()).join(format!(
+    let path = catalog.preview_cache_dir().join(format!(
         "{}.{}",
         image_do.hash,
         PREVIEW_FILE_TYPE.get_file_extension()
