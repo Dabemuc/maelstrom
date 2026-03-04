@@ -60,5 +60,6 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::ViewModeSelected(mode) => workspace::handle_view_mode_selected(app, mode),
         Message::PreviewSelected(hash) => workspace::handle_preview_selected(app, hash),
         Message::DevelopStateLoaded(result) => develop::handle_develop_state_loaded(app, result),
+        Message::ImageDeveloped(handle) => develop::handle_image_developed(app, handle),
     }
 }

@@ -5,20 +5,20 @@ use crate::components::divider::divider;
 use crate::message::Message;
 use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{Preview, PreviewState, ViewMode};
+use iced::Alignment::Center;
 use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
 use iced::widget::{
-    button, column, container, image, mouse_area, pick_list, responsive, row, scrollable, svg,
-    text, Space,
+    Space, button, column, container, image, mouse_area, pick_list, responsive, row, scrollable,
+    svg, text,
 };
-use iced::Alignment::Center;
 use iced::{Alignment, Element, Length};
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
     let content = match state.view_mode {
         ViewMode::NoCatalog => no_catalog_view(),
         ViewMode::Library => library_view(state),
-        _ => Space::new().width(Length::Fill).height(Length::Fill).into(),
+        ViewMode::Develop => develop_view(state),
     };
 
     container(content)
@@ -186,4 +186,16 @@ fn library_view(state: &App) -> Element<'_, Message> {
         }))
     ]
     .into()
+}
+
+fn develop_view(state: &App) -> Element<'_, Message> {
+    if let Some(handle) = state
+        .develop_state
+        .as_ref()
+        .and_then(|s| s.developed_handle.as_ref())
+    {
+        container(image(handle.clone())).into()
+    } else {
+        text!("Image not available").into()
+    }
 }

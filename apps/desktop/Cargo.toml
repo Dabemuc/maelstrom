@@ -8,6 +8,7 @@ io = { path = "../../crates/io", package = "io" }
 maelstrom_core = { path = "../../crates/core", package = "core" }
 maelstrom_image = { path = "../../crates/image", package = "image" }
 previews = { path = "../../crates/previews" }
+graph = { path = "../../crates/graph" }
 iced = { version = "0.14.0", features = ["svg", "image"] }
 image = "0.25.9"
 rfd = "0.17.2"

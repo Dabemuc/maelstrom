@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use iced::widget::image::Handle;
 use iced::widget::pane_grid;
 use io::catalog::ImageDO;
 use io::catalog::catalog::Catalog;
@@ -45,4 +46,5 @@ pub enum Message {
     ViewModeSelected(ViewMode),
     PreviewSelected(String),
     DevelopStateLoaded(Result<DevelopState, StateError>),
+    ImageDeveloped(Handle),
 }

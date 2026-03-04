@@ -1,3 +1,4 @@
+use iced::widget::image::Handle;
 use io::{
     catalog::{EditGraph, catalog::Catalog},
     image_files::supported_image_file_types::SupportedFileTypes,
@@ -9,7 +10,8 @@ use crate::state::{Preview, state_error::StateError};
 #[derive(Debug, Clone)]
 pub struct DevelopState {
     pub edit_graph: EditGraph,
-    pub linear_image: LinearImage,
+    pub original_linear_image: LinearImage,
+    pub developed_handle: Option<Handle>,
 }
 
 impl DevelopState {
@@ -29,7 +31,8 @@ impl DevelopState {
 
         Ok(Self {
             edit_graph,
-            linear_image,
+            original_linear_image: linear_image,
+            developed_handle: None,
         })
     }
 }
