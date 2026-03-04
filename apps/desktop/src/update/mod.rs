@@ -1,4 +1,5 @@
 pub mod catalog;
+pub mod develop;
 pub mod helpers;
 pub mod import;
 pub mod navigator;
@@ -58,5 +59,6 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         ),
         Message::ViewModeSelected(mode) => workspace::handle_view_mode_selected(app, mode),
         Message::PreviewSelected(hash) => workspace::handle_preview_selected(app, hash),
+        Message::DevelopStateLoaded(result) => develop::handle_develop_state_loaded(app, result),
     }
 }

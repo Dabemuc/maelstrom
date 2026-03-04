@@ -8,6 +8,7 @@ use crate::app::App;
 use crate::components::sidebar_right::RightSidebarMode;
 use crate::message::Message;
 use crate::state::ViewMode;
+use crate::state::develop::DevelopState;
 use crate::state::workspace::SortingOption;
 use crate::update::helpers::to_workspace_scan_result;
 
@@ -88,7 +89,31 @@ pub fn handle_preview_selected(app: &mut App, hash: String) -> Task<Message> {
 pub fn handle_view_mode_selected(app: &mut App, mode: ViewMode) -> Task<Message> {
     println!("View mode switched to {:?}", mode);
 
+    let mut tasks: Vec<Task<Message>> = Vec::new();
+
     if mode == ViewMode::Develop {
+        if let Some(catalog) = app.catalog.clone() {
+            if let Some(selected_hash) = app.workspace_state.selected_preview_hash.as_ref() {
+                if let Some(preview) = app
+                    .workspace_state
+                    .previews
+                    .get(selected_hash)
+                    .or_else(|| app.workspace_state.preview_cache.get(selected_hash))
+                {
+                    let preview = preview.clone();
+                    // Load develop state
+                    tasks.push(Task::perform(
+                        async move { DevelopState::from_preview(catalog, &preview).await },
+                        Message::DevelopStateLoaded,
+                    ));
+                } else {
+                    println!("Failed to load Develop state. Selected preview not found");
+                }
+            } else {
+                println!("Failed to load Develop state. No preview selected");
+            }
+        }
+        // Update ui
         app.right_sidebar_mode = RightSidebarMode::Operations;
         app.rebuild_pane_grid();
     } else if mode == ViewMode::Library {
@@ -98,5 +123,5 @@ pub fn handle_view_mode_selected(app: &mut App, mode: ViewMode) -> Task<Message>
 
     app.view_mode = mode;
 
-    Task::none()
+    Task::batch(tasks)
 }

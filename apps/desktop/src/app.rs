@@ -7,16 +7,17 @@ use iced::widget::image::Handle;
 use iced::widget::{column, pane_grid};
 use iced::{Element, Length, Task};
 
-use io::catalog::catalog::{Catalog, CATALOG_FILE_NAME, CATALOG_FOLDER_NAME};
+use io::catalog::catalog::{CATALOG_FILE_NAME, CATALOG_FOLDER_NAME, Catalog};
 
 use crate::business::workspace::WorkspaceModel;
 use crate::components::center_stage::center_stage;
 use crate::components::control_panel_bottom::control_panel_bottom;
 use crate::components::control_panel_top::control_panel_top;
 use crate::components::divider::divider;
-use crate::components::sidebar_left::{sidebar_left, LeftSidebarMode};
-use crate::components::sidebar_right::{sidebar_right, RightSidebarMode};
+use crate::components::sidebar_left::{LeftSidebarMode, sidebar_left};
+use crate::components::sidebar_right::{RightSidebarMode, sidebar_right};
 use crate::message::Message;
+use crate::state::develop::DevelopState;
 use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{NavigatorState, ViewMode, WorkspaceState};
 use crate::{theme, update};
@@ -29,6 +30,7 @@ pub struct App {
     pub imported_dirs: Vec<PathBuf>,
     pub navigator_state: NavigatorState,
     pub workspace_state: WorkspaceState,
+    pub develop_state: Option<DevelopState>,
     pub(crate) selection_request_seq: u64,
     pub(crate) active_selection_request_id: Option<u64>,
     pub(crate) pane_grid_state: pane_grid::State<PaneKind>,
@@ -87,6 +89,7 @@ impl App {
                 sorting_direction: SortingDirection::Descending,
                 selected_preview_hash: None,
             },
+            develop_state: None,
             selection_request_seq: 0,
             active_selection_request_id: None,
             pane_grid_state: layout.state,

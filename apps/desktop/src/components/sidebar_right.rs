@@ -57,8 +57,12 @@ pub fn sidebar_right(state: &App) -> Element<'_, Message> {
         .into()
 }
 
-fn operations_view(_state: &App) -> Element<'_, Message> {
-    text("Develop views placeholder").into()
+fn operations_view(state: &App) -> Element<'_, Message> {
+    if let Some(develop_state) = state.develop_state.clone() {
+        text(format!("{:#?}", develop_state.edit_graph)).into()
+    } else {
+        text("No Develop state").into()
+    }
 }
 
 fn metadata_view(state: &App) -> Element<'_, Message> {

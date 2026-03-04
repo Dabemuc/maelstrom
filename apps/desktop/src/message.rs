@@ -1,16 +1,18 @@
 use std::path::PathBuf;
 
 use iced::widget::pane_grid;
+use io::catalog::ImageDO;
 use io::catalog::catalog::Catalog;
 use io::catalog::catalog_error::CatalogError;
-use io::catalog::ImageDO;
 use io::image_files::helpers::FolderScanResult;
 use previews::preview_generation::PreviewGenerationError;
 
 use crate::components::sidebar_left::LeftSidebarMode;
 use crate::components::sidebar_right::RightSidebarMode;
-use crate::state::workspace::SortingOption;
 use crate::state::ViewMode;
+use crate::state::develop::DevelopState;
+use crate::state::state_error::StateError;
+use crate::state::workspace::SortingOption;
 use crate::state::{Preview, SelectionDiffData};
 
 #[derive(Debug, Clone)]
@@ -42,4 +44,5 @@ pub enum Message {
     PreviewDoubleClicked(String),
     ViewModeSelected(ViewMode),
     PreviewSelected(String),
+    DevelopStateLoaded(Result<DevelopState, StateError>),
 }

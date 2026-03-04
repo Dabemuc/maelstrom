@@ -56,6 +56,16 @@ impl TursoDB {
         )
         .await?;
 
+        conn.execute(
+            r#"CREATE TABLE IF NOT EXISTS edit_graphs (
+                content_hash TEXT PRIMARY KEY,
+                graph_json TEXT NOT NULL,
+                updated_at TEXT
+            )"#,
+            (),
+        )
+        .await?;
+
         Ok(Self { conn })
     }
 
@@ -97,6 +107,61 @@ impl TursoDB {
             .await?;
 
         Ok(rows.next().await?.is_some())
+    }
+
+    pub async fn get_edit_graph_json(
+        &self,
+        content_hash: &str,
+    ) -> turso::Result<Option<String>> {
+        let mut rows = self
+            .conn
+            .query(
+                "SELECT graph_json FROM edit_graphs WHERE content_hash = ?1 LIMIT 1",
+                [content_hash],
+            )
+            .await?;
+
+        if let Some(row) = rows.next().await? {
+            Ok(Some(row.get(0)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn set_edit_graph_json(
+        &self,
+        content_hash: &str,
+        graph_json: &str,
+    ) -> turso::Result<()> {
+        self.conn
+            .execute(
+                r#"
+                INSERT INTO edit_graphs (content_hash, graph_json, updated_at)
+                VALUES (?1, ?2, datetime('now'))
+                ON CONFLICT(content_hash)
+                DO UPDATE SET graph_json = excluded.graph_json, updated_at = datetime('now')
+                "#,
+                [content_hash, graph_json],
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn ensure_edit_graph_json(
+        &self,
+        content_hash: &str,
+        graph_json: &str,
+    ) -> turso::Result<()> {
+        self.conn
+            .execute(
+                r#"
+                INSERT OR IGNORE INTO edit_graphs (content_hash, graph_json, updated_at)
+                VALUES (?1, ?2, datetime('now'))
+                "#,
+                [content_hash, graph_json],
+            )
+            .await?;
+        Ok(())
     }
 
     /// Returns the hashes of all images for a given path (and subpaths)

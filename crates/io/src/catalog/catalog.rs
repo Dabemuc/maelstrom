@@ -1,6 +1,7 @@
 use super::turso::TursoDB;
 use crate::catalog::catalog_error::CatalogError;
 use crate::catalog::turso::ImageDO;
+use crate::catalog::EditGraph;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -192,7 +193,16 @@ impl Catalog {
             .to_str()
             .ok_or_else(|| CatalogError::InvalidPathEncoding(path_ref.to_path_buf()))?;
 
-        Ok(self.db.add_image(content_hash, path_str).await?)
+        let image_do = self.db.add_image(content_hash, path_str).await?;
+
+        let default_graph = EditGraph::default();
+        let default_json = serde_json::to_string(&default_graph)
+            .map_err(|e| CatalogError::Database(e.to_string()))?;
+        self.db
+            .ensure_edit_graph_json(content_hash, &default_json)
+            .await?;
+
+        Ok(image_do)
     }
 
     pub async fn get_all_image_dos_for_path(
@@ -207,6 +217,31 @@ impl Catalog {
 
         let hashes = self.db.get_image_dos_by_path(path_str).await?;
         Ok(hashes)
+    }
+
+    pub async fn get_edit_graph(&self, content_hash: &str) -> Result<EditGraph, CatalogError> {
+        if let Some(graph_json) = self.db.get_edit_graph_json(content_hash).await? {
+            let graph = serde_json::from_str(&graph_json)
+                .map_err(|e| CatalogError::Database(e.to_string()))?;
+            return Ok(graph);
+        }
+
+        let default_graph = EditGraph::default();
+        self.set_edit_graph(content_hash, &default_graph).await?;
+        Ok(default_graph)
+    }
+
+    pub async fn set_edit_graph(
+        &self,
+        content_hash: &str,
+        graph: &EditGraph,
+    ) -> Result<(), CatalogError> {
+        let graph_json = serde_json::to_string(graph)
+            .map_err(|e| CatalogError::Database(e.to_string()))?;
+        self.db
+            .set_edit_graph_json(content_hash, &graph_json)
+            .await?;
+        Ok(())
     }
 
     /// Prints catalog metadata: version and imported directories.
