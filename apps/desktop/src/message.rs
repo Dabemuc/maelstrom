@@ -9,6 +9,7 @@ use previews::preview_generation::PreviewGenerationError;
 
 use crate::components::sidebar_left::LeftSidebarMode;
 use crate::components::sidebar_right::RightSidebarMode;
+use crate::state::workspace::SortingOption;
 use crate::state::{Preview, SelectionDiffData};
 
 #[derive(Debug, Clone)]
@@ -35,4 +36,7 @@ pub enum Message {
     SelectionDiffComputed(SelectionDiffData),
     PreviewDataLoadedForImage(Preview),
     PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
+    SortingOptionSelected(SortingOption),
+    SortingDirectionToggled,
+    PreviewSelected(String),
 }

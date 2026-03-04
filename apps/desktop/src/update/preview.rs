@@ -6,7 +6,7 @@ use previews::preview_generation::PreviewGenerationError;
 
 use crate::app::App;
 use crate::message::Message;
-use crate::state::Preview;
+use crate::state::workspace::Preview;
 use crate::update::helpers::build_preview_from_image_do;
 
 pub fn handle_preview_generated(
@@ -27,8 +27,22 @@ pub fn handle_preview_generated(
                     .insert(image_do.hash.clone(), preview.clone());
 
                 if let Some(selected) = app.navigator_state.selected.as_ref() {
-                    if preview.path_to_original.starts_with(selected) {
-                        app.workspace_state.previews.insert(image_do.hash, preview);
+                    if preview.original_image.path.starts_with(selected) {
+                        app.workspace_state
+                            .previews
+                            .insert(image_do.hash.clone(), preview);
+
+                        // Add to sorted preview keys if not already present
+                        if !app
+                            .workspace_state
+                            .sorted_preview_keys
+                            .contains(&image_do.hash)
+                        {
+                            app.workspace_state.sorted_preview_keys.push(image_do.hash);
+                        }
+
+                        // Resort the previews
+                        app.workspace_state.sort_previews();
                     }
                 }
             }
@@ -43,19 +57,27 @@ pub fn handle_preview_generated(
 }
 
 pub fn handle_preview_data_loaded_for_image(app: &mut App, preview: Preview) -> Task<Message> {
-    let hash = preview.hash.clone();
+    let hash = preview.original_image.hash.clone();
 
     app.workspace_state
         .model
-        .upsert_preview_key(hash.clone(), preview.path_to_original.clone());
+        .upsert_preview_key(hash.clone(), preview.original_image.path.clone());
 
     app.workspace_state
         .preview_cache
         .insert(hash.clone(), preview.clone());
 
     if let Some(selected) = app.navigator_state.selected.as_ref() {
-        if preview.path_to_original.starts_with(selected) {
-            app.workspace_state.previews.insert(hash, preview);
+        if preview.original_image.path.starts_with(selected) {
+            app.workspace_state.previews.insert(hash.clone(), preview);
+
+            // Add to sorted preview keys if not already present
+            if !app.workspace_state.sorted_preview_keys.contains(&hash) {
+                app.workspace_state.sorted_preview_keys.push(hash);
+            }
+
+            // Resort the previews
+            app.workspace_state.sort_previews();
         }
     }
 

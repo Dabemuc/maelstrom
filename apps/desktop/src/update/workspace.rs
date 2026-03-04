@@ -6,6 +6,7 @@ use io::image_files::helpers::{FolderScanResult, scan_folder_images};
 
 use crate::app::App;
 use crate::message::Message;
+use crate::state::workspace::SortingOption;
 use crate::update::helpers::to_workspace_scan_result;
 
 pub fn handle_error_message(_app: &mut App, _msg: String) -> Task<Message> {
@@ -50,6 +51,35 @@ pub fn handle_workspace_root_scanned(
     if app.workspace_state.roots_scanning.is_empty() {
         crate::app::startup_log("All root scans finished");
     }
+
+    Task::none()
+}
+
+pub fn handle_sorting_option_selected(app: &mut App, option: SortingOption) -> Task<Message> {
+    println!("Selected Sorting Option {}", option);
+    app.workspace_state.selected_sorting_option = option;
+
+    // Resort the previews
+    app.workspace_state.sort_previews();
+
+    Task::none()
+}
+
+pub fn handle_sorting_direction_toggled(app: &mut App) -> Task<Message> {
+    app.workspace_state.sorting_direction =
+        app.workspace_state.sorting_direction.toggle();
+    println!(
+        "Sorting direction set to {:?}",
+        app.workspace_state.sorting_direction
+    );
+    app.workspace_state.sort_previews();
+
+    Task::none()
+}
+
+pub fn handle_preview_selected(app: &mut App, hash: String) -> Task<Message> {
+    println!("Selected preview with hash {}", hash);
+    app.workspace_state.selected_preview_hash = Some(hash);
 
     Task::none()
 }

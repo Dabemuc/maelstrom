@@ -105,7 +105,8 @@ pub fn handle_selection_diff_computed(
 
         if let Some(preview) = app.workspace_state.previews.get_mut(&image_do.hash) {
             if preview
-                .path_to_original
+                .original_image
+                .path
                 .starts_with(&diff_data.selected_path)
             {
                 preview.preview_state = PreviewState::OriginalMissing;

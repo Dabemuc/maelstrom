@@ -110,13 +110,15 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
                     icon_button(
                         svg::Handle::from_memory(include_bytes!("../../assets/icons/collapse.svg")),
                         "Collapse all",
-                        false
+                        false,
+                        0.0
                     )
                     .on_press(Message::NavigatorCollapseAll),
                     icon_button(
                         svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
                         "Import new folder",
-                        false
+                        false,
+                        0.0
                     )
                     .on_press(Message::ImportDirectory)
                 ]

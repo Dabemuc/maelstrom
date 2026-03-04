@@ -59,6 +59,7 @@ pub fn handle_imported_directories_load_attempted(
             app.workspace_state.model.root_folders = paths.clone();
             app.workspace_state.preview_cache.clear();
             app.workspace_state.previews.clear();
+            app.workspace_state.sorted_preview_keys.clear();
             app.workspace_state.roots_scanning = paths.iter().cloned().collect();
 
             crate::app::startup_log("Dispatching root scan tasks");

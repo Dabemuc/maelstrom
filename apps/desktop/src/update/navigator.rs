@@ -29,6 +29,7 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
     if app.navigator_state.selected.as_ref() == Some(&path) {
         app.navigator_state.selected = None;
         app.workspace_state.previews.clear();
+        app.workspace_state.sorted_preview_keys.clear();
         app.selection_request_seq = app.selection_request_seq.wrapping_add(1);
         app.active_selection_request_id = None;
         return Task::none();

@@ -1,10 +1,16 @@
 use crate::app::App;
 use crate::components::common::styled_tooltip::styled_tooltip;
+use crate::components::common::svg_button::icon_button;
+use crate::components::divider::divider;
 use crate::message::Message;
-use crate::state::{PreviewState, ViewMode};
+use crate::state::workspace::{SortingDirection, SortingOption};
+use crate::state::{Preview, PreviewState, ViewMode};
 use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
-use iced::widget::{Space, button, column, container, image, responsive, row, scrollable, text};
+use iced::widget::{
+    button, column, container, image, pick_list, responsive, row, scrollable, svg, text, Space,
+};
+use iced::Alignment::Center;
 use iced::{Alignment, Element, Length};
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
@@ -63,52 +69,127 @@ const CELL_SIZE: f32 = 150.0; // box width/height
 const SPACING: f32 = 10.0;
 
 fn library_view(state: &App) -> Element<'_, Message> {
-    let previews: Vec<_> = state.workspace_state.previews.iter().collect();
+    // Create a vector of preview references ordered by the sorted keys
+    let previews: Vec<(&String, &Preview)> = state
+        .workspace_state
+        .sorted_preview_keys
+        .iter()
+        .filter_map(|k| {
+            state
+                .workspace_state
+                .previews
+                .get(k)
+                .map(|preview| (k, preview))
+        })
+        .collect();
 
-    // println!("[Center Stage] Rendering previews: {:?}", previews);
+    column![
+        row![
+            Space::new().width(Length::Fill),
+            text("Sort by"),
+            pick_list(
+                vec![SortingOption::FileName, SortingOption::CaptureDate],
+                Some(&state.workspace_state.selected_sorting_option),
+                Message::SortingOptionSelected
+            )
+            .placeholder(state.workspace_state.selected_sorting_option.to_string()),
+            icon_button(
+                svg::Handle::from_memory(include_bytes!("../../assets/icons/sort.svg")),
+                match state.workspace_state.sorting_direction {
+                    SortingDirection::Descending => "Sort: Descending",
+                    SortingDirection::Ascending => "Sort: Ascending",
+                },
+                true,
+                match state.workspace_state.sorting_direction {
+                    SortingDirection::Descending => 0.0,
+                    SortingDirection::Ascending => std::f32::consts::PI,
+                }
+            )
+            .on_press(Message::SortingDirectionToggled)
+        ]
+        .padding(10)
+        .spacing(8)
+        .align_y(Center),
+        divider(false),
+        scrollable(responsive(move |size| {
+            let available_width = size.width;
 
-    scrollable(responsive(move |size| {
-        let available_width = size.width;
+            let per_row = ((available_width + SPACING) / (CELL_SIZE + SPACING))
+                .floor()
+                .max(1.0) as usize;
 
-        let per_row = ((available_width + SPACING) / (CELL_SIZE + SPACING))
-            .floor()
-            .max(1.0) as usize;
+            let mut col = column![].spacing(SPACING);
 
-        let mut col = column![].spacing(SPACING);
+            for chunk in previews.chunks(per_row) {
+                let mut r = row![].spacing(SPACING);
 
-        for chunk in previews.chunks(per_row) {
-            let mut r = row![].spacing(SPACING);
-
-            for pv in chunk {
-                let img = image(
-                    if pv.1.img_handle.is_some() && pv.1.preview_state == PreviewState::Ok {
-                        pv.1.img_handle.clone().unwrap().clone()
-                    } else {
-                        state
-                            .workspace_state
-                            .handle_to_missing_preview_placeholder
-                            .clone()
-                    },
-                )
-                .width(Length::Fixed(CELL_SIZE))
-                .height(Length::Fixed(CELL_SIZE));
-
-                r = r.push(
-                    container(styled_tooltip(
-                        img,
-                        pv.1.path_to_original.to_str().unwrap_or(""),
-                        Position::Top,
-                    ))
+                for pv in chunk {
+                    let img = image(
+                        if pv.1.img_handle.is_some() && pv.1.preview_state == PreviewState::Ok {
+                            pv.1.img_handle.clone().unwrap().clone()
+                        } else {
+                            state
+                                .workspace_state
+                                .handle_to_missing_preview_placeholder
+                                .clone()
+                        },
+                    )
                     .width(Length::Fixed(CELL_SIZE))
-                    .height(Length::Fixed(CELL_SIZE))
-                    .padding(10),
-                );
+                    .height(Length::Fixed(CELL_SIZE));
+
+                    // Create the tooltip container
+                    let tooltip_container = styled_tooltip(
+                        img,
+                        pv.1.original_image.path.to_str().unwrap_or(""),
+                        Position::Top,
+                    );
+
+                    // Create button with invisible styling
+                    let button = button(tooltip_container)
+                        .on_press(Message::PreviewSelected(pv.0.clone()))
+                        .width(Length::Fixed(CELL_SIZE))
+                        .height(Length::Fixed(CELL_SIZE))
+                        .padding(10)
+                        .style(
+                            |theme: &iced::Theme, status: iced::widget::button::Status| {
+                                let mut style = iced::widget::button::text(theme, status);
+                                // Make button completely transparent
+                                style.background =
+                                    Some(iced::Background::Color(iced::Color::TRANSPARENT));
+                                style.border = iced::Border::default();
+                                style
+                            },
+                        );
+
+                    // Apply selection highlighting if needed
+                    if let Some(ref selected_hash) = state.workspace_state.selected_preview_hash {
+                        if selected_hash == pv.0 {
+                            // Apply highlighting for selected item
+                            r = r.push(
+                                container(button)
+                                    .width(Length::Fixed(CELL_SIZE))
+                                    .height(Length::Fixed(CELL_SIZE))
+                                    .padding(2)
+                                    .style(|_theme: &iced::Theme| container::Style {
+                                        background: Some(
+                                            iced::Color::from_rgba(0.0, 0.0, 0.0, 0.2).into(),
+                                        ),
+                                        ..container::Style::default()
+                                    }),
+                            );
+                        } else {
+                            r = r.push(button);
+                        }
+                    } else {
+                        r = r.push(button);
+                    }
+                }
+
+                col = col.push(r);
             }
 
-            col = col.push(r);
-        }
-
-        col.into()
-    }))
+            col.into()
+        }))
+    ]
     .into()
 }
