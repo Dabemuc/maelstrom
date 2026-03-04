@@ -5,9 +5,10 @@ use iced::futures::channel::oneshot;
 use io::image_files::helpers::{FolderScanResult, scan_folder_images};
 
 use crate::app::App;
+use crate::components::sidebar_right::RightSidebarMode;
 use crate::message::Message;
-use crate::state::workspace::SortingOption;
 use crate::state::ViewMode;
+use crate::state::workspace::SortingOption;
 use crate::update::helpers::to_workspace_scan_result;
 
 pub fn handle_error_message(_app: &mut App, _msg: String) -> Task<Message> {
@@ -67,8 +68,7 @@ pub fn handle_sorting_option_selected(app: &mut App, option: SortingOption) -> T
 }
 
 pub fn handle_sorting_direction_toggled(app: &mut App) -> Task<Message> {
-    app.workspace_state.sorting_direction =
-        app.workspace_state.sorting_direction.toggle();
+    app.workspace_state.sorting_direction = app.workspace_state.sorting_direction.toggle();
     println!(
         "Sorting direction set to {:?}",
         app.workspace_state.sorting_direction
@@ -85,9 +85,18 @@ pub fn handle_preview_selected(app: &mut App, hash: String) -> Task<Message> {
     Task::none()
 }
 
-pub fn handle_preview_double_clicked(app: &mut App, hash: String) -> Task<Message> {
-    println!("Preview double clicked (switching to develop): {}", hash);
-    app.view_mode = ViewMode::Develop;
+pub fn handle_view_mode_selected(app: &mut App, mode: ViewMode) -> Task<Message> {
+    println!("View mode switched to {:?}", mode);
+
+    if mode == ViewMode::Develop {
+        app.right_sidebar_mode = RightSidebarMode::Operations;
+        app.rebuild_pane_grid();
+    } else if mode == ViewMode::Library {
+        app.right_sidebar_mode = RightSidebarMode::Hidden;
+        app.rebuild_pane_grid();
+    }
+
+    app.view_mode = mode;
 
     Task::none()
 }

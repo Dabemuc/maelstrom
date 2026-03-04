@@ -53,9 +53,10 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             workspace::handle_sorting_option_selected(app, option)
         }
         Message::SortingDirectionToggled => workspace::handle_sorting_direction_toggled(app),
-        Message::PreviewDoubleClicked(hash) => {
-            workspace::handle_preview_double_clicked(app, hash)
-        }
+        Message::PreviewDoubleClicked(hash) => workspace::handle_preview_selected(app, hash).chain(
+            workspace::handle_view_mode_selected(app, crate::state::ViewMode::Develop),
+        ),
+        Message::ViewModeSelected(mode) => workspace::handle_view_mode_selected(app, mode),
         Message::PreviewSelected(hash) => workspace::handle_preview_selected(app, hash),
     }
 }
