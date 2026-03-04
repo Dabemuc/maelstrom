@@ -8,7 +8,8 @@ use crate::state::{Preview, PreviewState, ViewMode};
 use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
 use iced::widget::{
-    button, column, container, image, pick_list, responsive, row, scrollable, svg, text, Space,
+    button, column, container, image, mouse_area, pick_list, responsive, row, scrollable, svg,
+    text, Space,
 };
 use iced::Alignment::Center;
 use iced::{Alignment, Element, Length};
@@ -145,28 +146,21 @@ fn library_view(state: &App) -> Element<'_, Message> {
                     );
 
                     // Create button with invisible styling
-                    let button = button(tooltip_container)
-                        .on_press(Message::PreviewSelected(pv.0.clone()))
+                    let base = container(tooltip_container)
                         .width(Length::Fixed(CELL_SIZE))
                         .height(Length::Fixed(CELL_SIZE))
-                        .padding(10)
-                        .style(
-                            |theme: &iced::Theme, status: iced::widget::button::Status| {
-                                let mut style = iced::widget::button::text(theme, status);
-                                // Make button completely transparent
-                                style.background =
-                                    Some(iced::Background::Color(iced::Color::TRANSPARENT));
-                                style.border = iced::Border::default();
-                                style
-                            },
-                        );
+                        .padding(10);
+
+                    let clickable = mouse_area(base)
+                        .on_press(Message::PreviewSelected(pv.0.clone()))
+                        .on_double_click(Message::PreviewDoubleClicked(pv.0.clone()));
 
                     // Apply selection highlighting if needed
                     if let Some(ref selected_hash) = state.workspace_state.selected_preview_hash {
                         if selected_hash == pv.0 {
                             // Apply highlighting for selected item
                             r = r.push(
-                                container(button)
+                                container(clickable)
                                     .width(Length::Fixed(CELL_SIZE))
                                     .height(Length::Fixed(CELL_SIZE))
                                     .padding(2)
@@ -178,10 +172,10 @@ fn library_view(state: &App) -> Element<'_, Message> {
                                     }),
                             );
                         } else {
-                            r = r.push(button);
+                            r = r.push(clickable);
                         }
                     } else {
-                        r = r.push(button);
+                        r = r.push(clickable);
                     }
                 }
 

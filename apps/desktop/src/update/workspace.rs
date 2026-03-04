@@ -7,6 +7,7 @@ use io::image_files::helpers::{FolderScanResult, scan_folder_images};
 use crate::app::App;
 use crate::message::Message;
 use crate::state::workspace::SortingOption;
+use crate::state::ViewMode;
 use crate::update::helpers::to_workspace_scan_result;
 
 pub fn handle_error_message(_app: &mut App, _msg: String) -> Task<Message> {
@@ -80,6 +81,13 @@ pub fn handle_sorting_direction_toggled(app: &mut App) -> Task<Message> {
 pub fn handle_preview_selected(app: &mut App, hash: String) -> Task<Message> {
     println!("Selected preview with hash {}", hash);
     app.workspace_state.selected_preview_hash = Some(hash);
+
+    Task::none()
+}
+
+pub fn handle_preview_double_clicked(app: &mut App, hash: String) -> Task<Message> {
+    println!("Preview double clicked (switching to develop): {}", hash);
+    app.view_mode = ViewMode::Develop;
 
     Task::none()
 }
