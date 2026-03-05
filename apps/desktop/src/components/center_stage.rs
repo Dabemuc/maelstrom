@@ -2,16 +2,17 @@ use crate::app::App;
 use crate::components::common::styled_tooltip::styled_tooltip;
 use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
+use crate::components::linear_image_view::LinearImageView;
 use crate::message::Message;
 use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{Preview, PreviewState, ViewMode};
-use iced::Alignment::Center;
 use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
 use iced::widget::{
-    Space, button, column, container, image, mouse_area, pick_list, responsive, row, scrollable,
-    svg, text,
+    button, column, container, image, mouse_area, pick_list, responsive, row, scrollable, svg,
+    text, Space,
 };
+use iced::Alignment::Center;
 use iced::{Alignment, Element, Length};
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
@@ -189,13 +190,13 @@ fn library_view(state: &App) -> Element<'_, Message> {
 }
 
 fn develop_view(state: &App) -> Element<'_, Message> {
-    if let Some(handle) = state
+    if let Some(developed_linear_image) = state
         .develop_state
         .as_ref()
-        .and_then(|s| s.developed_handle.as_ref())
+        .and_then(|s| s.developed_linear_image.clone())
     {
-        container(image(handle.clone())).into()
+        LinearImageView::new(developed_linear_image).into()
     } else {
-        text!("Image not available").into()
+        text!("No develop state loaded").into()
     }
 }

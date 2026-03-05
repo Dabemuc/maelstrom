@@ -1045,10 +1045,12 @@ dependencies = [
 name = "desktop"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "core",
  "dirs",
  "graph",
  "iced",
+ "iced_wgpu",
  "image 0.1.0",
  "image 0.25.9",
  "io",

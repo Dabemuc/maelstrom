@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use iced::widget::image::Handle;
 use iced::widget::pane_grid;
 use io::catalog::ImageDO;
 use io::catalog::catalog::Catalog;
 use io::catalog::catalog_error::CatalogError;
 use io::image_files::helpers::FolderScanResult;
+use maelstrom_image::linear_image::LinearImage;
 use previews::preview_generation::PreviewGenerationError;
 
 use crate::components::sidebar_left::LeftSidebarMode;
@@ -46,5 +46,5 @@ pub enum Message {
     ViewModeSelected(ViewMode),
     PreviewSelected(String),
     DevelopStateLoaded(Result<DevelopState, StateError>),
-    ImageDeveloped(Handle),
+    ImageDeveloped(LinearImage),
 }
