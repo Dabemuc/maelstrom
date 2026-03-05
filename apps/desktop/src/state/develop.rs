@@ -12,6 +12,16 @@ pub struct DevelopState {
     pub edit_graph: EditGraph,
     pub original_linear_image: LinearImage,
     pub developed_linear_image: Option<Arc<LinearImage>>,
+    pub zoom: f32,
+    pub zoom_mode: ZoomMode,
+    pub pan: [f32; 2],
+    pub fit_request: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ZoomMode {
+    FitOnce,
+    Manual,
 }
 
 impl DevelopState {
@@ -33,6 +43,10 @@ impl DevelopState {
             edit_graph,
             original_linear_image: linear_image,
             developed_linear_image: None,
+            zoom: 1.0,
+            zoom_mode: ZoomMode::FitOnce,
+            pan: [0.0, 0.0],
+            fit_request: 0,
         })
     }
 }

@@ -12,16 +12,25 @@ struct GammaSettings {
     apply_srgb: u32,
 };
 
+struct Transform {
+    scale: vec2<f32>,
+    translate: vec2<f32>,
+};
+
 @group(0) @binding(0)
 var tex: texture_2d<f32>;
 
 @group(0) @binding(1)
 var<uniform> settings: GammaSettings;
 
+@group(0) @binding(2)
+var<uniform> transform: Transform;
+
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    out.position = vec4<f32>(input.position, 0.0, 1.0);
+    let pos = input.position * transform.scale + transform.translate;
+    out.position = vec4<f32>(pos, 0.0, 1.0);
     out.uv = input.uv;
     return out;
 }

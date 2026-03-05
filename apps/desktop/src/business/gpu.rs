@@ -7,14 +7,24 @@ use iced_wgpu::wgpu;
 use iced_wgpu::wgpu::util::DeviceExt;
 use maelstrom_image::linear_image::LinearImage;
 
+use crate::state::develop::ZoomMode;
+
 #[derive(Debug, Clone)]
 pub struct LinearImagePrimitive {
     pub image: Arc<LinearImage>,
+    pub zoom: f32,
+    pub zoom_mode: ZoomMode,
+    pub pan: [f32; 2],
 }
 
 impl LinearImagePrimitive {
-    pub fn new(image: Arc<LinearImage>) -> Self {
-        Self { image }
+    pub fn new(image: Arc<LinearImage>, zoom: f32, zoom_mode: ZoomMode, pan: [f32; 2]) -> Self {
+        Self {
+            image,
+            zoom,
+            zoom_mode,
+            pan,
+        }
     }
 }
 
@@ -26,10 +36,19 @@ impl primitive::Primitive for LinearImagePrimitive {
         pipeline: &mut Self::Pipeline,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        _bounds: &Rectangle,
-        _viewport: &Viewport,
+        bounds: &Rectangle,
+        viewport: &Viewport,
     ) {
-        pipeline.prepare(device, queue, &self.image);
+        pipeline.prepare(
+            device,
+            queue,
+            &self.image,
+            self.zoom,
+            self.zoom_mode,
+            self.pan,
+            bounds,
+            viewport,
+        );
     }
 
     fn draw(&self, pipeline: &Self::Pipeline, render_pass: &mut wgpu::RenderPass<'_>) -> bool {
@@ -43,6 +62,13 @@ impl primitive::Primitive for LinearImagePrimitive {
 struct GammaSettings {
     apply_srgb: u32,
     _padding: [u32; 3],
+}
+
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+#[repr(C)]
+struct TransformUniform {
+    scale: [f32; 2],
+    translate: [f32; 2],
 }
 
 #[derive(Debug)]
@@ -60,13 +86,25 @@ pub struct LinearImagePipeline {
     index_buffer: wgpu::Buffer,
     index_count: u32,
     gamma_buffer: wgpu::Buffer,
+    transform_buffer: wgpu::Buffer,
     cached_texture: Option<CachedTexture>,
 }
 
 impl LinearImagePipeline {
-    fn prepare(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, image: &Arc<LinearImage>) {
+    fn prepare(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        image: &Arc<LinearImage>,
+        zoom: f32,
+        zoom_mode: ZoomMode,
+        pan: [f32; 2],
+        bounds: &Rectangle,
+        viewport: &Viewport,
+    ) {
         if let Some(cache) = &self.cached_texture {
             if Arc::ptr_eq(&cache.image, image) {
+                self.update_transform(queue, image, zoom, zoom_mode, pan, bounds, viewport);
                 return;
             }
         }
@@ -140,6 +178,10 @@ impl LinearImagePipeline {
                     binding: 1,
                     resource: self.gamma_buffer.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: self.transform_buffer.as_entire_binding(),
+                },
             ],
         });
 
@@ -148,6 +190,58 @@ impl LinearImagePipeline {
             _texture: texture,
             bind_group,
         });
+
+        self.update_transform(queue, image, zoom, zoom_mode, pan, bounds, viewport);
+    }
+
+    fn update_transform(
+        &self,
+        queue: &wgpu::Queue,
+        image: &LinearImage,
+        zoom: f32,
+        zoom_mode: ZoomMode,
+        pan: [f32; 2],
+        bounds: &Rectangle,
+        viewport: &Viewport,
+    ) {
+        if bounds.width <= 0.0 || bounds.height <= 0.0 {
+            return;
+        }
+
+        let scale_factor = viewport.scale_factor();
+        let image_width = image.width as f32;
+        let image_height = image.height as f32;
+
+        let fit_zoom = if bounds.width > 0.0 && bounds.height > 0.0 {
+            let scale_x = bounds.width / image_width;
+            let scale_y = bounds.height / image_height;
+            scale_x.min(scale_y)
+        } else {
+            1.0
+        };
+
+        let effective_zoom = match zoom_mode {
+            ZoomMode::FitOnce => fit_zoom,
+            ZoomMode::Manual => zoom,
+        };
+
+        let display_width_px = image_width * effective_zoom * scale_factor;
+        let display_height_px = image_height * effective_zoom * scale_factor;
+
+        let viewport_width = bounds.width * scale_factor;
+        let viewport_height = bounds.height * scale_factor;
+
+        let scale = [
+            (display_width_px / viewport_width) * 2.0,
+            (display_height_px / viewport_height) * 2.0,
+        ];
+        let translate = [
+            (pan[0] * effective_zoom * scale_factor / viewport_width) * 2.0,
+            -(pan[1] * effective_zoom * scale_factor / viewport_height) * 2.0,
+        ];
+
+        let uniform = TransformUniform { scale, translate };
+        queue.write_buffer(&self.transform_buffer, 0, bytemuck::bytes_of(&uniform));
     }
 
     fn draw(&self, render_pass: &mut wgpu::RenderPass<'_>) {
@@ -174,19 +268,19 @@ impl Pipeline for LinearImagePipeline {
 
         let vertices = [
             Vertex {
-                position: [-1.0, -1.0],
+                position: [-0.5, -0.5],
                 uv: [0.0, 1.0],
             },
             Vertex {
-                position: [1.0, -1.0],
+                position: [0.5, -0.5],
                 uv: [1.0, 1.0],
             },
             Vertex {
-                position: [1.0, 1.0],
+                position: [0.5, 0.5],
                 uv: [1.0, 0.0],
             },
             Vertex {
-                position: [-1.0, 1.0],
+                position: [-0.5, 0.5],
                 uv: [0.0, 0.0],
             },
         ];
@@ -213,6 +307,16 @@ impl Pipeline for LinearImagePipeline {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
+        let transform_uniform = TransformUniform {
+            scale: [0.0, 0.0],
+            translate: [0.0, 0.0],
+        };
+        let transform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("linear-image.transform"),
+            contents: bytemuck::bytes_of(&transform_uniform),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("linear-image.bind-group-layout"),
             entries: &[
@@ -229,6 +333,16 @@ impl Pipeline for LinearImagePipeline {
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::VERTEX,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -293,6 +407,7 @@ impl Pipeline for LinearImagePipeline {
             index_buffer,
             index_count: indices.len() as u32,
             gamma_buffer,
+            transform_buffer,
             cached_texture: None,
         }
     }

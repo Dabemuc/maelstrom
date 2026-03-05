@@ -61,5 +61,9 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::PreviewSelected(hash) => workspace::handle_preview_selected(app, hash),
         Message::DevelopStateLoaded(result) => develop::handle_develop_state_loaded(app, result),
         Message::ImageDeveloped(linear_image) => develop::handle_image_developed(app, linear_image),
+        Message::DevelopZoomSet(zoom) => develop::handle_develop_zoom_set(app, zoom),
+        Message::DevelopZoomBy(factor) => develop::handle_develop_zoom_by(app, factor),
+        Message::DevelopZoomSetPan { zoom, pan } => develop::handle_develop_zoom_set_pan(app, zoom, pan),
+        Message::DevelopFitToScreen => develop::handle_develop_fit_to_screen(app),
     }
 }

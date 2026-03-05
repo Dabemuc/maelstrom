@@ -48,3 +48,41 @@ pub fn handle_image_developed(app: &mut App, developed_linear_image: LinearImage
 
     Task::none()
 }
+
+pub fn handle_develop_zoom_set(app: &mut App, zoom: f32) -> Task<Message> {
+    if let Some(state) = app.develop_state.as_mut() {
+        state.zoom = zoom.clamp(0.05, 64.0);
+        state.zoom_mode = crate::state::develop::ZoomMode::Manual;
+    }
+
+    Task::none()
+}
+
+pub fn handle_develop_zoom_by(app: &mut App, factor: f32) -> Task<Message> {
+    if let Some(state) = app.develop_state.as_mut() {
+        let new_zoom = (state.zoom * factor).clamp(0.05, 64.0);
+        state.zoom = new_zoom;
+        state.zoom_mode = crate::state::develop::ZoomMode::Manual;
+    }
+
+    Task::none()
+}
+
+pub fn handle_develop_zoom_set_pan(app: &mut App, zoom: f32, pan: [f32; 2]) -> Task<Message> {
+    if let Some(state) = app.develop_state.as_mut() {
+        state.zoom = zoom.clamp(0.05, 64.0);
+        state.pan = pan;
+        state.zoom_mode = crate::state::develop::ZoomMode::Manual;
+    }
+
+    Task::none()
+}
+
+pub fn handle_develop_fit_to_screen(app: &mut App) -> Task<Message> {
+    if let Some(state) = app.develop_state.as_mut() {
+        state.fit_request = state.fit_request.wrapping_add(1);
+        state.zoom_mode = crate::state::develop::ZoomMode::FitOnce;
+    }
+
+    Task::none()
+}

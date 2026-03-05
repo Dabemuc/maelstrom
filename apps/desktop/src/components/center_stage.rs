@@ -190,12 +190,19 @@ fn library_view(state: &App) -> Element<'_, Message> {
 }
 
 fn develop_view(state: &App) -> Element<'_, Message> {
-    if let Some(developed_linear_image) = state
-        .develop_state
-        .as_ref()
-        .and_then(|s| s.developed_linear_image.clone())
-    {
-        LinearImageView::new(developed_linear_image).into()
+    if let Some(develop_state) = state.develop_state.as_ref() {
+        if let Some(developed_linear_image) = develop_state.developed_linear_image.clone() {
+            LinearImageView::new(
+                developed_linear_image,
+                develop_state.zoom,
+                develop_state.zoom_mode,
+                develop_state.pan,
+                develop_state.fit_request,
+            )
+            .into()
+        } else {
+            text!("No develop state loaded").into()
+        }
     } else {
         text!("No develop state loaded").into()
     }
