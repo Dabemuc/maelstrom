@@ -16,6 +16,7 @@ pub struct DevelopState {
     pub zoom_mode: ZoomMode,
     pub pan: [f32; 2],
     pub fit_request: u64,
+    pub pan_enabled: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,6 +48,7 @@ impl DevelopState {
             zoom_mode: ZoomMode::FitOnce,
             pan: [0.0, 0.0],
             fit_request: 0,
+            pan_enabled: true,
         })
     }
 }

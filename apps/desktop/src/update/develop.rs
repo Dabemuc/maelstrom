@@ -86,3 +86,12 @@ pub fn handle_develop_fit_to_screen(app: &mut App) -> Task<Message> {
 
     Task::none()
 }
+
+pub fn handle_develop_pan_by(app: &mut App, delta: [f32; 2]) -> Task<Message> {
+    if let Some(state) = app.develop_state.as_mut() {
+        state.pan[0] += delta[0];
+        state.pan[1] += delta[1];
+    }
+
+    Task::none()
+}

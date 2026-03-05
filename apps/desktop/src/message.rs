@@ -51,4 +51,5 @@ pub enum Message {
     DevelopZoomBy(f32),
     DevelopZoomSetPan { zoom: f32, pan: [f32; 2] },
     DevelopFitToScreen,
+    DevelopPanBy { delta: [f32; 2] },
 }

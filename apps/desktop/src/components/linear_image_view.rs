@@ -15,6 +15,8 @@ use crate::state::develop::ZoomMode;
 struct LinearImageViewState {
     initialized: bool,
     last_fit_request: u64,
+    dragging: bool,
+    last_cursor: Option<iced::Point>,
 }
 
 pub struct LinearImageView {
@@ -23,6 +25,7 @@ pub struct LinearImageView {
     zoom_mode: ZoomMode,
     pan: [f32; 2],
     fit_request: u64,
+    pan_enabled: bool,
 }
 
 impl LinearImageView {
@@ -32,6 +35,7 @@ impl LinearImageView {
         zoom_mode: ZoomMode,
         pan: [f32; 2],
         fit_request: u64,
+        pan_enabled: bool,
     ) -> Self {
         Self {
             image,
@@ -39,6 +43,7 @@ impl LinearImageView {
             zoom_mode,
             pan,
             fit_request,
+            pan_enabled,
         }
     }
 }
@@ -131,6 +136,59 @@ impl Widget<Message, iced::Theme, Renderer> for LinearImageView {
                     }
                 }
             }
+        }
+
+        if self.pan_enabled {
+            match event {
+                Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                    if let Some(position) = cursor.position_over(layout.bounds()) {
+                        state.dragging = true;
+                        state.last_cursor = Some(position);
+                    }
+                }
+                Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                    state.dragging = false;
+                    state.last_cursor = None;
+                }
+                Event::Mouse(mouse::Event::CursorMoved { position }) => {
+                    if state.dragging {
+                        if let Some(last) = state.last_cursor {
+                            let delta = [position.x - last.x, position.y - last.y];
+                            state.last_cursor = Some(*position);
+
+                            let pan_delta = [delta[0] / self.zoom, delta[1] / self.zoom];
+                            shell.publish(Message::DevelopPanBy { delta: pan_delta });
+                        } else {
+                            state.last_cursor = Some(*position);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn mouse_interaction(
+        &self,
+        tree: &Tree,
+        layout: Layout<'_>,
+        cursor: mouse::Cursor,
+        _viewport: &Rectangle,
+        _renderer: &Renderer,
+    ) -> mouse::Interaction {
+        if !self.pan_enabled {
+            return mouse::Interaction::None;
+        }
+
+        if cursor.is_over(layout.bounds()) {
+            let dragging = tree.state.downcast_ref::<LinearImageViewState>().dragging;
+            if dragging {
+                mouse::Interaction::Grabbing
+            } else {
+                mouse::Interaction::Grab
+            }
+        } else {
+            mouse::Interaction::None
         }
     }
 }

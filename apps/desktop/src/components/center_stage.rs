@@ -198,6 +198,7 @@ fn develop_view(state: &App) -> Element<'_, Message> {
                 develop_state.zoom_mode,
                 develop_state.pan,
                 develop_state.fit_request,
+                develop_state.pan_enabled,
             )
             .into()
         } else {

@@ -65,5 +65,6 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::DevelopZoomBy(factor) => develop::handle_develop_zoom_by(app, factor),
         Message::DevelopZoomSetPan { zoom, pan } => develop::handle_develop_zoom_set_pan(app, zoom, pan),
         Message::DevelopFitToScreen => develop::handle_develop_fit_to_screen(app),
+        Message::DevelopPanBy { delta } => develop::handle_develop_pan_by(app, delta),
     }
 }
