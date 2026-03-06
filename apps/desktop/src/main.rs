@@ -5,6 +5,7 @@ mod message;
 mod state;
 mod theme;
 mod update;
+mod render;
 
 use app::App;
 

@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use iced::advanced::{layout, renderer, widget::Tree, Clipboard, Layout, Shell, Widget};
+use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, renderer, widget::Tree};
 use iced::mouse;
 use iced::{Element, Event, Length, Rectangle, Renderer, Size};
 use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 
 use maelstrom_image::linear_image::LinearImage;
 
-use crate::business::gpu::LinearImagePrimitive;
 use crate::message::Message;
+use crate::render::gpu::LinearImagePrimitive;
 use crate::state::develop::ZoomMode;
 
 #[derive(Debug, Default)]
