@@ -81,6 +81,7 @@ pub fn handle_develop_zoom_set_pan(app: &mut App, zoom: f32, pan: [f32; 2]) -> T
 pub fn handle_develop_fit_to_screen(app: &mut App) -> Task<Message> {
     if let Some(state) = app.develop_state.as_mut() {
         state.fit_request = state.fit_request.wrapping_add(1);
+        state.pan = [0.0, 0.0];
         state.zoom_mode = crate::state::develop::ZoomMode::FitOnce;
     }
 

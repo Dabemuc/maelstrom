@@ -8,23 +8,36 @@ use iced::widget::{Space, button, container, row, svg, text};
 use iced::{Alignment, Element, Length};
 
 pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
-    let left_controls = row![
-        icon_button(
-            svg::Handle::from_memory(include_bytes!("../../assets/icons/folder.svg")),
-            "Directories",
-            state.left_sidebar_mode == LeftSidebarMode::Directories,
-            0.0
-        )
-        .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Directories)),
-        icon_button(
-            svg::Handle::from_memory(include_bytes!("../../assets/icons/layers.svg")),
-            "Collections",
-            state.left_sidebar_mode == LeftSidebarMode::Collections,
-            0.0
-        )
-        .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Collections)),
-    ]
-    .spacing(10);
+    let left_controls = match state.view_mode {
+        ViewMode::Library => row![
+            icon_button(
+                svg::Handle::from_memory(include_bytes!("../../assets/icons/folder.svg")),
+                "Directories",
+                state.left_sidebar_mode == LeftSidebarMode::Directories,
+                0.0
+            )
+            .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Directories)),
+            icon_button(
+                svg::Handle::from_memory(include_bytes!("../../assets/icons/layers.svg")),
+                "Collections",
+                state.left_sidebar_mode == LeftSidebarMode::Collections,
+                0.0
+            )
+            .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Collections)),
+        ]
+        .spacing(10),
+        ViewMode::Develop => row![
+            icon_button(
+                svg::Handle::from_memory(include_bytes!("../../assets/icons/navigator.svg")),
+                "Navigator",
+                state.left_sidebar_mode == LeftSidebarMode::Navigator,
+                0.0
+            )
+            .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Navigator)),
+        ]
+        .spacing(10),
+        _ => row![],
+    };
 
     let mut library_button = button(text("Library").size(14)).padding([6, 10]).style(
         |theme: &iced::Theme, status: iced::widget::button::Status| {
@@ -59,23 +72,35 @@ pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
 
     let center_controls = row![library_button, develop_button].spacing(8);
 
-    let right_controls = row![
-        icon_button(
-            svg::Handle::from_memory(include_bytes!("../../assets/icons/metadata.svg")),
-            "Metadata",
-            state.right_sidebar_mode == RightSidebarMode::Metadata,
-            0.0
-        )
-        .on_press(Message::RightSidebarClicked(RightSidebarMode::Metadata)),
-        icon_button(
-            svg::Handle::from_memory(include_bytes!("../../assets/icons/edit.svg")),
-            "Develop",
-            state.right_sidebar_mode == RightSidebarMode::Operations,
-            0.0
-        )
-        .on_press(Message::RightSidebarClicked(RightSidebarMode::Operations)),
-    ]
-    .spacing(10);
+    let right_controls = match state.view_mode {
+        ViewMode::Library => row![
+            icon_button(
+                svg::Handle::from_memory(include_bytes!("../../assets/icons/metadata.svg")),
+                "Metadata",
+                state.right_sidebar_mode == RightSidebarMode::Metadata,
+                0.0
+            )
+            .on_press(Message::RightSidebarClicked(RightSidebarMode::Metadata)),
+        ]
+        .spacing(10),
+        ViewMode::Develop => row![
+            icon_button(
+                svg::Handle::from_memory(include_bytes!("../../assets/icons/metadata.svg")),
+                "Metadata",
+                state.right_sidebar_mode == RightSidebarMode::Metadata,
+                0.0
+            )
+            .on_press(Message::RightSidebarClicked(RightSidebarMode::Metadata)),
+            icon_button(
+                svg::Handle::from_memory(include_bytes!("../../assets/icons/edit.svg")),
+                "Develop",
+                state.right_sidebar_mode == RightSidebarMode::Operations,
+                0.0
+            )
+            .on_press(Message::RightSidebarClicked(RightSidebarMode::Operations)),
+        ],
+        _ => row![],
+    };
 
     container(
         row![

@@ -5,6 +5,7 @@ use iced::futures::channel::oneshot;
 use io::image_files::helpers::{FolderScanResult, scan_folder_images};
 
 use crate::app::App;
+use crate::components::sidebar_left::LeftSidebarMode;
 use crate::components::sidebar_right::RightSidebarMode;
 use crate::message::Message;
 use crate::state::ViewMode;
@@ -114,9 +115,11 @@ pub fn handle_view_mode_selected(app: &mut App, mode: ViewMode) -> Task<Message>
             }
         }
         // Update ui
+        app.left_sidebar_mode = LeftSidebarMode::Navigator;
         app.right_sidebar_mode = RightSidebarMode::Operations;
         app.rebuild_pane_grid();
     } else if mode == ViewMode::Library {
+        app.left_sidebar_mode = LeftSidebarMode::Directories;
         app.right_sidebar_mode = RightSidebarMode::Hidden;
         app.rebuild_pane_grid();
     }

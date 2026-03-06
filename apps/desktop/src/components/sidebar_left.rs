@@ -3,11 +3,11 @@ use crate::business::workspace::FolderNode;
 use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::message::Message;
+use iced::Alignment::Center;
 use iced::alignment::Horizontal::Right;
 use iced::border::Radius;
 use iced::widget::scrollable::Scrollbar;
-use iced::widget::{button, column, container, mouse_area, responsive, row, svg, text, Space};
-use iced::Alignment::Center;
+use iced::widget::{Space, button, column, container, mouse_area, responsive, row, svg, text};
 use iced::{Element, Length};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -16,6 +16,7 @@ use std::path::PathBuf;
 pub enum LeftSidebarMode {
     Directories,
     Collections,
+    Navigator,
     Hidden,
 }
 
@@ -24,6 +25,7 @@ pub fn sidebar_left(state: &App) -> Element<'_, Message> {
         container(match state.left_sidebar_mode {
             LeftSidebarMode::Directories => directories_view(state),
             LeftSidebarMode::Collections => collections_view(state),
+            LeftSidebarMode::Navigator => navigator_view(state),
             LeftSidebarMode::Hidden => text("Hidden").into(),
         })
         .width(Length::Fill)
@@ -235,11 +237,7 @@ fn build_folder_tree(
     let has_children = node.map(|n| !n.children.is_empty()).unwrap_or(false);
 
     let icon = if has_children {
-        if is_expanded {
-            "▼"
-        } else {
-            "▶"
-        }
+        if is_expanded { "▼" } else { "▶" }
     } else {
         "•"
     };
@@ -413,4 +411,37 @@ fn collections_view(state: &App) -> Element<'_, Message> {
     } else {
         text("No Catalog").into()
     }
+}
+
+fn navigator_view(_state: &App) -> Element<'_, Message> {
+    column![
+        // Navigator section
+        column![
+            row![
+                text("Navigator"),
+                Space::new().width(Length::Fill),
+                icon_button(
+                    svg::Handle::from_memory(include_bytes!(
+                        "../../assets/icons/fit-to-screen.svg"
+                    )),
+                    "Fit to screen",
+                    false,
+                    0.0
+                )
+                .on_press(Message::DevelopFitToScreen)
+            ]
+            .padding(4)
+            .align_y(Center),
+            divider(false),
+            container(text("Placeholder"))
+                .width(Length::Fill)
+                .height(200)
+                .align_x(Center)
+                .align_y(Center)
+        ],
+        divider(false)
+    ]
+    .width(Length::Fill)
+    .height(Length::Fill)
+    .into()
 }
