@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use graph::node::Backend;
 use iced::Task;
+use io::catalog::edit_graph::{EditNodeKind, NodeParameters, ParamType, ParamValue};
 use maelstrom_image::linear_image::LinearImage;
 
 use crate::{
     app::App,
     message::Message,
-    state::{develop::DevelopState, state_error::StateError},
+    state::{develop::{DevelopState, ParamKey}, state_error::StateError},
 };
 
 pub fn handle_develop_state_loaded(
@@ -95,4 +96,169 @@ pub fn handle_develop_pan_by(app: &mut App, delta: [f32; 2]) -> Task<Message> {
     }
 
     Task::none()
+}
+
+pub fn handle_develop_param_changed(
+    app: &mut App,
+    kind: EditNodeKind,
+    name: String,
+    value: ParamValue,
+) -> Task<Message> {
+    let Some(state) = app.develop_state.as_mut() else {
+        return Task::none();
+    };
+
+    let changed = apply_param_change(state, kind, name.as_str(), value.clone());
+
+    if changed {
+        let key = ParamKey { kind, name };
+        match value {
+            ParamValue::Float(v) => {
+                state.param_inputs.insert(key, format!("{:.2}", v));
+            }
+            ParamValue::Int(v) => {
+                state.param_inputs.insert(key, v.to_string());
+            }
+            ParamValue::Bool(_) => {}
+        }
+    } else {
+        return Task::none();
+    }
+
+    let graph = state.edit_graph.clone();
+    let original_linear_image = state.original_linear_image.clone();
+
+    Task::perform(
+        async move {
+            graph
+                .compile()
+                .execute(original_linear_image, Backend::Cpu)
+        },
+        Message::ImageDeveloped,
+    )
+}
+
+pub fn handle_develop_param_input_changed(
+    app: &mut App,
+    kind: EditNodeKind,
+    name: String,
+    value: String,
+) -> Task<Message> {
+    let Some(state) = app.develop_state.as_mut() else {
+        return Task::none();
+    };
+
+    let key = ParamKey {
+        kind,
+        name: name.clone(),
+    };
+    state.param_inputs.insert(key.clone(), value.clone());
+
+    let spec = kind
+        .default_node()
+        .param_specs()
+        .iter()
+        .find(|spec| spec.name == name);
+
+    let Some(spec) = spec else {
+        return Task::none();
+    };
+
+    let trimmed = value.trim();
+
+    let applied = match spec.ty {
+        ParamType::Float { min, max, .. } => trimmed
+            .parse::<f32>()
+            .ok()
+            .map(|parsed| {
+                let clamped = parsed.clamp(min, max);
+                let changed = apply_param_change(
+                    state,
+                    kind,
+                    name.as_str(),
+                    ParamValue::Float(clamped),
+                );
+
+                if (clamped - parsed).abs() > f32::EPSILON {
+                    state
+                        .param_inputs
+                        .insert(key, format!("{:.2}", clamped));
+                }
+
+                changed
+            })
+            .unwrap_or(false),
+        ParamType::Int { min, max } => trimmed
+            .parse::<i32>()
+            .ok()
+            .map(|parsed| {
+                let clamped = parsed.clamp(min, max);
+                let changed = apply_param_change(
+                    state,
+                    kind,
+                    name.as_str(),
+                    ParamValue::Int(clamped),
+                );
+
+                if clamped != parsed {
+                    state.param_inputs.insert(key, clamped.to_string());
+                }
+
+                changed
+            })
+            .unwrap_or(false),
+        ParamType::Bool => false,
+    };
+
+    if !applied {
+        return Task::none();
+    }
+
+    let graph = state.edit_graph.clone();
+    let original_linear_image = state.original_linear_image.clone();
+
+    Task::perform(
+        async move {
+            graph
+                .compile()
+                .execute(original_linear_image, Backend::Cpu)
+        },
+        Message::ImageDeveloped,
+    )
+}
+
+fn apply_param_change(
+    state: &mut DevelopState,
+    kind: EditNodeKind,
+    name: &str,
+    value: ParamValue,
+) -> bool {
+    let existing_index = state
+        .edit_graph
+        .nodes
+        .iter()
+        .position(|node| node.kind() == kind);
+
+    if let Some(index) = existing_index {
+        let before = state.edit_graph.nodes[index].clone();
+        let node = &mut state.edit_graph.nodes[index];
+        node.set_param(name, value);
+
+        if node.is_default() {
+            state.edit_graph.nodes.remove(index);
+            return true;
+        }
+
+        return before != *node;
+    }
+
+    let mut node = kind.default_node();
+    node.set_param(name, value);
+
+    if node.is_default() {
+        return false;
+    }
+
+    state.edit_graph.nodes.push(node);
+    true
 }

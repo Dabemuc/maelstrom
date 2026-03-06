@@ -1,8 +1,9 @@
 use io::{
-    catalog::{EditGraph, catalog::Catalog},
+    catalog::{EditGraph, catalog::Catalog, edit_graph::EditNodeKind},
     image_files::supported_image_file_types::SupportedFileTypes,
 };
 use maelstrom_image::linear_image::LinearImage;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::state::{Preview, state_error::StateError};
@@ -17,6 +18,13 @@ pub struct DevelopState {
     pub pan: [f32; 2],
     pub fit_request: u64,
     pub pan_enabled: bool,
+    pub param_inputs: HashMap<ParamKey, String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ParamKey {
+    pub kind: EditNodeKind,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +57,7 @@ impl DevelopState {
             pan: [0.0, 0.0],
             fit_request: 0,
             pan_enabled: true,
+            param_inputs: HashMap::new(),
         })
     }
 }

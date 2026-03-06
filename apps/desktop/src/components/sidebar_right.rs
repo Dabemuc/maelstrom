@@ -3,12 +3,15 @@ use crate::components::divider::divider;
 use crate::message::Message;
 use crate::state::ViewMode;
 use iced::alignment::Horizontal::Right;
-use iced::widget::{Scrollable, Space, column, container, responsive, row, text};
+use iced::widget::{
+    checkbox, column, container, responsive, row, slider, text, text_input, Scrollable, Space,
+};
 use iced::{Alignment, Element, Length};
-use time::OffsetDateTime;
-use time::PrimitiveDateTime;
+use io::catalog::edit_graph::{EditNodeKind, NodeParameters, ParamType, ParamValue};
 use time::format_description;
 use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
+use time::PrimitiveDateTime;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RightSidebarMode {
@@ -58,11 +61,128 @@ pub fn sidebar_right(state: &App) -> Element<'_, Message> {
 }
 
 fn operations_view(state: &App) -> Element<'_, Message> {
-    if let Some(develop_state) = state.develop_state.clone() {
-        text(format!("{:#?}", develop_state.edit_graph)).into()
-    } else {
-        text("No Develop state").into()
+    let Some(develop_state) = state.develop_state.as_ref() else {
+        return text("No Develop state").into();
+    };
+
+    let mut content = column![section_title("Operations")].spacing(8);
+
+    for &kind in EditNodeKind::all() {
+        let mut default_node = kind.default_node();
+        let node = develop_state
+            .edit_graph
+            .nodes
+            .iter()
+            .find(|node| node.kind() == kind)
+            .unwrap_or(&default_node);
+
+        let mut node_column = column![section_title(kind.label())].spacing(8);
+
+        for spec in node.param_specs() {
+            let value = node.get_param(spec.name);
+
+            match (&spec.ty, value) {
+                (ParamType::Float { min, max, step }, ParamValue::Float(current)) => {
+                    let name = spec.name.to_string();
+                    let name_for_input = name.clone();
+                    let name_for_slider = name.clone();
+                    let key = crate::state::develop::ParamKey {
+                        kind,
+                        name: name.clone(),
+                    };
+                    let value_label = develop_state
+                        .param_inputs
+                        .get(&key)
+                        .cloned()
+                        .unwrap_or_else(|| format!("{:.2}", current));
+                    let header = row![
+                        text(spec.label).size(12),
+                        Space::new().width(Length::Fill),
+                        text_input("", &value_label)
+                            .width(Length::Fixed(72.0))
+                            .size(12)
+                            .on_input(move |value| Message::DevelopParamInputChanged {
+                                kind,
+                                name: name_for_input.clone(),
+                                value,
+                            }),
+                    ]
+                    .width(Length::Fill)
+                    .align_y(Alignment::Center);
+
+                    let input = slider(*min..=*max, current, move |new_value| {
+                        Message::DevelopParamChanged {
+                            kind,
+                            name: name_for_slider.clone(),
+                            value: ParamValue::Float(new_value),
+                        }
+                    })
+                    .step(*step);
+
+                    node_column = node_column.push(column![header, input].spacing(6));
+                }
+                (ParamType::Int { min, max }, ParamValue::Int(current)) => {
+                    let name = spec.name.to_string();
+                    let name_for_input = name.clone();
+                    let name_for_slider = name.clone();
+                    let key = crate::state::develop::ParamKey {
+                        kind,
+                        name: name.clone(),
+                    };
+                    let value_label = develop_state
+                        .param_inputs
+                        .get(&key)
+                        .cloned()
+                        .unwrap_or_else(|| current.to_string());
+                    let header = row![
+                        text(spec.label).size(12),
+                        Space::new().width(Length::Fill),
+                        text_input("", &value_label)
+                            .width(Length::Fixed(72.0))
+                            .size(12)
+                            .on_input(move |value| Message::DevelopParamInputChanged {
+                                kind,
+                                name: name_for_input.clone(),
+                                value,
+                            }),
+                    ]
+                    .width(Length::Fill)
+                    .align_y(Alignment::Center);
+
+                    let input = slider(*min..=*max, current, move |new_value| {
+                        Message::DevelopParamChanged {
+                            kind,
+                            name: name_for_slider.clone(),
+                            value: ParamValue::Int(new_value),
+                        }
+                    });
+
+                    node_column = node_column.push(column![header, input].spacing(6));
+                }
+                (ParamType::Bool, ParamValue::Bool(current)) => {
+                    let name = spec.name.to_string();
+                    let input = checkbox(current)
+                        .label(spec.label)
+                        .on_toggle(move |new_value| Message::DevelopParamChanged {
+                            kind,
+                            name: name.clone(),
+                            value: ParamValue::Bool(new_value),
+                        });
+
+                    node_column = node_column.push(input);
+                }
+                _ => {}
+            }
+        }
+
+        content = content.push(container(node_column).width(Length::Fill).padding([12, 16]));
+        content = content.push(divider(false));
     }
+
+    container(content)
+        .width(Length::Fill)
+        .height(Length::Shrink)
+        .into()
 }
 
 fn metadata_view(state: &App) -> Element<'_, Message> {
