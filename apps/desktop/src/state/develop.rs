@@ -1,9 +1,9 @@
-use iced::widget::image::Handle;
 use io::{
     catalog::{EditGraph, catalog::Catalog},
     image_files::supported_image_file_types::SupportedFileTypes,
 };
 use maelstrom_image::linear_image::LinearImage;
+use std::sync::Arc;
 
 use crate::state::{Preview, state_error::StateError};
 
@@ -11,7 +11,18 @@ use crate::state::{Preview, state_error::StateError};
 pub struct DevelopState {
     pub edit_graph: EditGraph,
     pub original_linear_image: LinearImage,
-    pub developed_handle: Option<Handle>,
+    pub developed_linear_image: Option<Arc<LinearImage>>,
+    pub zoom: f32,
+    pub zoom_mode: ZoomMode,
+    pub pan: [f32; 2],
+    pub fit_request: u64,
+    pub pan_enabled: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ZoomMode {
+    FitOnce,
+    Manual,
 }
 
 impl DevelopState {
@@ -32,7 +43,12 @@ impl DevelopState {
         Ok(Self {
             edit_graph,
             original_linear_image: linear_image,
-            developed_handle: None,
+            developed_linear_image: None,
+            zoom: 1.0,
+            zoom_mode: ZoomMode::FitOnce,
+            pan: [0.0, 0.0],
+            fit_request: 0,
+            pan_enabled: true,
         })
     }
 }

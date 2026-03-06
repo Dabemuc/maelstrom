@@ -9,10 +9,12 @@ maelstrom_core = { path = "../../crates/core", package = "core" }
 maelstrom_image = { path = "../../crates/image", package = "image" }
 previews = { path = "../../crates/previews" }
 graph = { path = "../../crates/graph" }
-iced = { version = "0.14.0", features = ["svg", "image"] }
+iced = { version = "0.14.0", features = ["svg", "image", "advanced"] }
+iced_wgpu = "0.14.0"
 image = "0.25.9"
 rfd = "0.17.2"
 tokio = { version = "1.0", features = ["full"] }
 dirs = "6.0.0"
 time = "0.3.36"
 thiserror = "2.0.18"
+bytemuck = { version = "1.25.0", features = ["derive"] }
