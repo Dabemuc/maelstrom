@@ -72,5 +72,10 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::DevelopParamInputChanged { kind, name, value } => {
             develop::handle_develop_param_input_changed(app, kind, name, value)
         }
+        Message::DevelopSaveRequested => develop::handle_develop_save_requested(app),
+        Message::DevelopSaveCompleted(result) => {
+            develop::handle_develop_save_completed(app, result)
+        }
+        Message::DevelopExportRequested => develop::handle_develop_export_requested(app),
     }
 }

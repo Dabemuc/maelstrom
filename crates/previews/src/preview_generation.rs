@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use graph::{graph::Graph, node::Backend};
 use io::{
     catalog::{
+        EditGraph,
         ImageDO,
         catalog::Catalog,
         catalog_error::CatalogError,
@@ -138,6 +139,61 @@ pub async fn generate_preview_for_image(
     } else {
         return Err(PreviewGenerationError::AlreadyExists);
     };
+}
+
+pub async fn generate_preview_for_image_with_graph(
+    path_to_img: PathBuf,
+    content_hash: String,
+    edit_graph: EditGraph,
+    catalog: &Catalog,
+) -> Result<ImageDO, PreviewGenerationError> {
+    let filename = path_to_filename(path_to_img.clone());
+
+    if !SupportedFileTypes::is_supported(&filename) {
+        println!(
+            "Preview generation failed. Filetype is not supported: {:?}",
+            path_to_img
+        );
+        return Err(PreviewGenerationError::FiletypeNotSupported);
+    }
+
+    let image_file_type = SupportedFileTypes::from_filename(&filename).unwrap();
+
+    let image_linear = image_file_type
+        .load(
+            path_to_img.to_str().unwrap(),
+            image_file_type.load_colorspace(path_to_img.to_str().unwrap()),
+        )
+        .unwrap();
+
+    let mut graph = edit_graph.compile();
+    graph.add_node(DownsampleFixed {
+        max_width: 480,
+        max_height: 480,
+    });
+
+    let result = graph.execute(image_linear, Backend::Cpu);
+
+    let preview_path_buf = catalog.preview_cache_dir().join(format!(
+        "{}.{}",
+        content_hash,
+        PREVIEW_FILE_TYPE.get_file_extension()
+    ));
+    let preview_path = preview_path_buf.to_str().unwrap();
+    if let Err(e) = PREVIEW_FILE_TYPE.save(
+        &result,
+        &preview_path,
+        ColorSpace::Srgb,
+        Some(SaveOptions { quality: 50 }),
+    ) {
+        eprintln!("Error saving preview for {:?}: {}", path_to_img, e);
+        return Err(PreviewGenerationError::SavingError(e.to_string()));
+    }
+
+    Ok(ImageDO {
+        path: path_to_img.to_str().unwrap().to_string(),
+        hash: content_hash,
+    })
 }
 
 fn path_to_filename(path: PathBuf) -> String {

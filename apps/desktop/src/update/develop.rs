@@ -98,6 +98,74 @@ pub fn handle_develop_pan_by(app: &mut App, delta: [f32; 2]) -> Task<Message> {
     Task::none()
 }
 
+pub fn handle_develop_save_requested(app: &mut App) -> Task<Message> {
+    let Some(catalog) = app.catalog.clone() else {
+        return Task::none();
+    };
+    let Some(state) = app.develop_state.as_ref() else {
+        return Task::none();
+    };
+    let Some(selected_hash) = app.workspace_state.selected_preview_hash.clone() else {
+        return Task::none();
+    };
+
+    let preview = app
+        .workspace_state
+        .preview_cache
+        .get(&selected_hash)
+        .or_else(|| app.workspace_state.previews.get(&selected_hash));
+    let Some(preview) = preview else {
+        return Task::none();
+    };
+
+    let graph_for_save = state.edit_graph.clone();
+    let graph_for_preview = state.edit_graph.clone();
+    let preview_path = preview.original_image.path.clone();
+    let catalog_for_save = catalog.clone();
+    let catalog_for_preview = catalog.clone();
+    let selected_hash_for_save = selected_hash.clone();
+    let selected_hash_for_preview = selected_hash.clone();
+
+    let save_task = Task::perform(
+        async move {
+            catalog_for_save
+                .set_edit_graph(&selected_hash_for_save, &graph_for_save)
+                .await
+        },
+        Message::DevelopSaveCompleted,
+    );
+
+    let preview_task = Task::perform(
+        async move {
+            previews::preview_generation::generate_preview_for_image_with_graph(
+                preview_path,
+                selected_hash_for_preview,
+                graph_for_preview,
+                &catalog_for_preview,
+            )
+            .await
+        },
+        Message::PreviewGenerated,
+    );
+
+    Task::batch(vec![save_task, preview_task])
+}
+
+pub fn handle_develop_save_completed(
+    _app: &mut App,
+    result: Result<(), io::catalog::catalog_error::CatalogError>,
+) -> Task<Message> {
+    if let Err(err) = result {
+        println!("Failed to save edit graph: {:#?}", err);
+    }
+
+    Task::none()
+}
+
+pub fn handle_develop_export_requested(_app: &mut App) -> Task<Message> {
+    Task::none()
+}
+
 pub fn handle_develop_param_changed(
     app: &mut App,
     kind: EditNodeKind,

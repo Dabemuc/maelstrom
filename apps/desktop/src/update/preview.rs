@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::PathBuf;
 
 use iced::Task;
@@ -16,7 +17,17 @@ pub fn handle_preview_generated(
     match result {
         Ok(image_do) => {
             if let Some(catalog) = &app.catalog {
-                let preview = build_preview_from_image_do(catalog, &image_do);
+                let mut preview = build_preview_from_image_do(catalog, &image_do);
+
+                let preview_path = catalog.preview_cache_dir().join(format!(
+                    "{}.{}",
+                    image_do.hash,
+                    previews::preview_generation::PREVIEW_FILE_TYPE.get_file_extension()
+                ));
+
+                if let Ok(bytes) = fs::read(&preview_path) {
+                    preview.img_handle = Some(iced::widget::image::Handle::from_bytes(bytes));
+                }
 
                 app.workspace_state
                     .model

@@ -4,7 +4,8 @@ use crate::message::Message;
 use crate::state::ViewMode;
 use iced::alignment::Horizontal::Right;
 use iced::widget::{
-    checkbox, column, container, responsive, row, slider, text, text_input, Scrollable, Space,
+    button, checkbox, column, container, responsive, row, slider, text, text_input, Scrollable,
+    Space,
 };
 use iced::{Alignment, Element, Length};
 use io::catalog::edit_graph::{EditNodeKind, NodeParameters, ParamType, ParamValue};
@@ -21,28 +22,35 @@ pub enum RightSidebarMode {
 }
 
 pub fn sidebar_right(state: &App) -> Element<'_, Message> {
+    let main_content = match state.view_mode {
+        ViewMode::Library => match state.right_sidebar_mode {
+            RightSidebarMode::Metadata => metadata_view(state),
+            _ => text(format!(
+                "No view for view mode {:?} and right sidebar mode {:?}",
+                state.view_mode, state.right_sidebar_mode
+            ))
+            .into(),
+        },
+
+        ViewMode::Develop => match state.right_sidebar_mode {
+            RightSidebarMode::Operations => operations_view(state),
+            _ => text(format!(
+                "No view for view mode {:?} and right sidebar mode {:?}",
+                state.view_mode, state.right_sidebar_mode
+            ))
+            .into(),
+        },
+        _ => text(format!("No view for view mode {:?}", state.view_mode)).into(),
+    };
+
     let content = row![
         divider(true),
-        Scrollable::new(match state.view_mode {
-            ViewMode::Library => match state.right_sidebar_mode {
-                RightSidebarMode::Metadata => metadata_view(state),
-                _ => text(format!(
-                    "No view for view mode {:?} and right sidebar mode {:?}",
-                    state.view_mode, state.right_sidebar_mode
-                ))
-                .into(),
-            },
-
-            ViewMode::Develop => match state.right_sidebar_mode {
-                RightSidebarMode::Operations => operations_view(state),
-                _ => text(format!(
-                    "No view for view mode {:?} and right sidebar mode {:?}",
-                    state.view_mode, state.right_sidebar_mode
-                ))
-                .into(),
-            },
-            _ => text(format!("No view for view mode {:?}", state.view_mode)).into(),
-        })
+        column![
+            Scrollable::new(main_content)
+                .width(Length::Fill)
+                .height(Length::Fill),
+            footer_controls(state),
+        ]
         .width(Length::Fill)
         .height(Length::Fill)
     ];
@@ -58,6 +66,44 @@ pub fn sidebar_right(state: &App) -> Element<'_, Message> {
             }
         })
         .into()
+}
+
+fn footer_controls(state: &App) -> Element<'_, Message> {
+    if state.view_mode != ViewMode::Develop
+        || state.right_sidebar_mode != RightSidebarMode::Operations
+    {
+        return Space::new().height(Length::Fixed(0.0)).into();
+    }
+
+    let can_save = state.catalog.is_some()
+        && state.develop_state.is_some()
+        && state.workspace_state.selected_preview_hash.is_some();
+
+    let mut save_button = button(text("Save").size(12)).padding([6, 12]);
+    if can_save {
+        save_button = save_button.on_press(Message::DevelopSaveRequested);
+    }
+
+    let export_button = button(text("Export").size(12))
+        .padding([6, 12])
+        .on_press(Message::DevelopExportRequested);
+
+    container(
+        row![save_button, export_button]
+            .spacing(8)
+            .width(Length::Fill),
+    )
+    .width(Length::Fill)
+    .padding([12, 16])
+    .style(|theme: &iced::Theme| {
+        let palette = theme.extended_palette();
+        container::Style {
+            background: Some(palette.background.weak.color.into()),
+            text_color: Some(palette.background.weak.text),
+            ..container::Style::default()
+        }
+    })
+    .into()
 }
 
 fn operations_view(state: &App) -> Element<'_, Message> {

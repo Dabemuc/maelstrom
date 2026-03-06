@@ -68,4 +68,7 @@ pub enum Message {
         name: String,
         value: String,
     },
+    DevelopSaveRequested,
+    DevelopSaveCompleted(Result<(), CatalogError>),
+    DevelopExportRequested,
 }
