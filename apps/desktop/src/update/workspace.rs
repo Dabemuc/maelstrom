@@ -17,8 +17,8 @@ pub fn handle_error_message(_app: &mut App, _msg: String) -> Task<Message> {
 }
 
 pub fn handle_refresh_imported_root(app: &mut App, root: PathBuf) -> Task<Message> {
-    app.navigator_state.context_menu_open = false;
-    app.navigator_state.context_menu_root = None;
+    app.directories_state.context_menu_open = false;
+    app.directories_state.context_menu_root = None;
     app.workspace_state.roots_scanning.insert(root.clone());
 
     Task::perform(

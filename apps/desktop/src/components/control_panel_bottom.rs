@@ -11,11 +11,11 @@ pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
     let left_controls = row![
         icon_button(
             svg::Handle::from_memory(include_bytes!("../../assets/icons/folder.svg")),
-            "Navigator",
-            state.left_sidebar_mode == LeftSidebarMode::Navigator,
+            "Directories",
+            state.left_sidebar_mode == LeftSidebarMode::Directories,
             0.0
         )
-        .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Navigator)),
+        .on_press(Message::LeftSidebarClicked(LeftSidebarMode::Directories)),
         icon_button(
             svg::Handle::from_memory(include_bytes!("../../assets/icons/layers.svg")),
             "Collections",

@@ -26,7 +26,7 @@ pub fn handle_preview_generated(
                     .preview_cache
                     .insert(image_do.hash.clone(), preview.clone());
 
-                if let Some(selected) = app.navigator_state.selected.as_ref() {
+                if let Some(selected) = app.directories_state.selected.as_ref() {
                     if preview.original_image.path.starts_with(selected) {
                         app.workspace_state
                             .previews
@@ -67,7 +67,7 @@ pub fn handle_preview_data_loaded_for_image(app: &mut App, preview: Preview) -> 
         .preview_cache
         .insert(hash.clone(), preview.clone());
 
-    if let Some(selected) = app.navigator_state.selected.as_ref() {
+    if let Some(selected) = app.directories_state.selected.as_ref() {
         if preview.original_image.path.starts_with(selected) {
             app.workspace_state.previews.insert(hash.clone(), preview);
 

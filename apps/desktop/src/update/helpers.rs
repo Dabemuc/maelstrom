@@ -23,7 +23,7 @@ pub fn refresh_selected_previews_from_cache(app: &mut App) {
     app.workspace_state.previews.clear();
     app.workspace_state.sorted_preview_keys.clear();
 
-    let Some(selected) = app.navigator_state.selected.as_ref() else {
+    let Some(selected) = app.directories_state.selected.as_ref() else {
         return;
     };
 

@@ -23,7 +23,7 @@ pub fn handle_selection_catalog_loaded(
                 return Task::none();
             }
 
-            if app.navigator_state.selected.as_ref() != Some(&selected_path) {
+            if app.directories_state.selected.as_ref() != Some(&selected_path) {
                 return Task::none();
             }
 

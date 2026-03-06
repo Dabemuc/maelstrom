@@ -14,7 +14,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LeftSidebarMode {
-    Navigator,
+    Directories,
     Collections,
     Hidden,
 }
@@ -22,7 +22,7 @@ pub enum LeftSidebarMode {
 pub fn sidebar_left(state: &App) -> Element<'_, Message> {
     let content = row![
         container(match state.left_sidebar_mode {
-            LeftSidebarMode::Navigator => navigator_view(state),
+            LeftSidebarMode::Directories => directories_view(state),
             LeftSidebarMode::Collections => collections_view(state),
             LeftSidebarMode::Hidden => text("Hidden").into(),
         })
@@ -49,7 +49,7 @@ pub fn sidebar_left(state: &App) -> Element<'_, Message> {
         .into()
 }
 
-fn navigator_view(state: &App) -> Element<'_, Message> {
+fn directories_view(state: &App) -> Element<'_, Message> {
     if state.catalog.is_none() {
         return text("No Catalog").into();
     }
@@ -71,8 +71,8 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
                     .push(build_loading_root_row(
                         root,
                         0,
-                        &state.navigator_state.context_menu_root,
-                        state.navigator_state.context_menu_open,
+                        &state.directories_state.context_menu_root,
+                        state.directories_state.context_menu_open,
                         true,
                     ))
                     .push(divider(false))
@@ -80,11 +80,11 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
                 tree_col
                     .push(build_folder_tree(
                         root,
-                        &state.navigator_state.expanded,
-                        &state.navigator_state.selected,
+                        &state.directories_state.expanded,
+                        &state.directories_state.selected,
                         &state.workspace_state.model.folder_index,
-                        &state.navigator_state.context_menu_root,
-                        state.navigator_state.context_menu_open,
+                        &state.directories_state.context_menu_root,
+                        state.directories_state.context_menu_open,
                         0,
                     ))
                     .push(divider(false))
@@ -113,7 +113,7 @@ fn navigator_view(state: &App) -> Element<'_, Message> {
                         false,
                         0.0
                     )
-                    .on_press(Message::NavigatorCollapseAll),
+                    .on_press(Message::DirectoriesCollapseAll),
                     icon_button(
                         svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
                         "Import new folder",

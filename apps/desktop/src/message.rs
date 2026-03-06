@@ -25,7 +25,7 @@ pub enum Message {
     SelectCatalog,
     CatalogLoadAttempted(Result<Catalog, CatalogError>),
     CatalogLoaded,
-    NavigatorCollapseAll,
+    DirectoriesCollapseAll,
     ImportDirectory,
     LoadImportedDirectories,
     ImportedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),

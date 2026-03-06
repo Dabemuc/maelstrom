@@ -19,7 +19,7 @@ use crate::components::sidebar_right::{RightSidebarMode, sidebar_right};
 use crate::message::Message;
 use crate::state::develop::DevelopState;
 use crate::state::workspace::{SortingDirection, SortingOption};
-use crate::state::{NavigatorState, ViewMode, WorkspaceState};
+use crate::state::{DirectoriesState, ViewMode, WorkspaceState};
 use crate::{theme, update};
 
 pub struct App {
@@ -28,7 +28,7 @@ pub struct App {
     pub view_mode: ViewMode,
     pub catalog: Option<Catalog>,
     pub imported_dirs: Vec<PathBuf>,
-    pub navigator_state: NavigatorState,
+    pub directories_state: DirectoriesState,
     pub workspace_state: WorkspaceState,
     pub develop_state: Option<DevelopState>,
     pub(crate) selection_request_seq: u64,
@@ -58,19 +58,19 @@ impl App {
         let left_ratio = default_left_ratio();
         let right_ratio = default_right_ratio();
         let layout = build_pane_grid_layout(
-            LeftSidebarMode::Navigator,
+            LeftSidebarMode::Directories,
             RightSidebarMode::Hidden,
             left_ratio,
             right_ratio,
         );
 
         let app = Self {
-            left_sidebar_mode: LeftSidebarMode::Navigator,
+            left_sidebar_mode: LeftSidebarMode::Directories,
             right_sidebar_mode: RightSidebarMode::Hidden,
             view_mode: ViewMode::NoCatalog,
             catalog: None,
             imported_dirs: Vec::new(),
-            navigator_state: NavigatorState {
+            directories_state: DirectoriesState {
                 expanded: HashSet::new(),
                 selected: None,
                 context_menu_root: None,

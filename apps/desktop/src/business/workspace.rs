@@ -25,7 +25,7 @@ impl FolderNode {
 /// Input payload produced by a filesystem scan.
 ///
 /// This is intentionally UI-agnostic and can be reused for:
-/// - navigator counts/tree generation
+/// - directories counts/tree generation
 /// - cache refresh diffing
 #[derive(Debug, Clone, Default)]
 pub struct WorkspaceScanResult {

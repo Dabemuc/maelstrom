@@ -5,29 +5,29 @@ use iced::Task;
 use crate::app::App;
 use crate::message::Message;
 
-pub fn handle_navigator_collapse_all(app: &mut App) -> Task<Message> {
-    app.navigator_state.expanded.clear();
+pub fn handle_directories_collapse_all(app: &mut App) -> Task<Message> {
+    app.directories_state.expanded.clear();
     Task::none()
 }
 
 pub fn handle_toggle_directory(app: &mut App, path: PathBuf) -> Task<Message> {
-    app.navigator_state.context_menu_open = false;
-    app.navigator_state.context_menu_root = None;
+    app.directories_state.context_menu_open = false;
+    app.directories_state.context_menu_root = None;
 
-    if app.navigator_state.expanded.contains(&path) {
-        app.navigator_state.expanded.remove(&path);
+    if app.directories_state.expanded.contains(&path) {
+        app.directories_state.expanded.remove(&path);
     } else {
-        app.navigator_state.expanded.insert(path);
+        app.directories_state.expanded.insert(path);
     }
     Task::none()
 }
 
 pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
-    app.navigator_state.context_menu_open = false;
-    app.navigator_state.context_menu_root = None;
+    app.directories_state.context_menu_open = false;
+    app.directories_state.context_menu_root = None;
 
-    if app.navigator_state.selected.as_ref() == Some(&path) {
-        app.navigator_state.selected = None;
+    if app.directories_state.selected.as_ref() == Some(&path) {
+        app.directories_state.selected = None;
         app.workspace_state.previews.clear();
         app.workspace_state.sorted_preview_keys.clear();
         app.selection_request_seq = app.selection_request_seq.wrapping_add(1);
@@ -35,7 +35,7 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
         return Task::none();
     }
 
-    app.navigator_state.selected = Some(path.clone());
+    app.directories_state.selected = Some(path.clone());
     app.selection_request_seq = app.selection_request_seq.wrapping_add(1);
     let request_id = app.selection_request_seq;
     app.active_selection_request_id = Some(request_id);
@@ -56,13 +56,13 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
 }
 
 pub fn handle_open_root_context_menu(app: &mut App, path: PathBuf) -> Task<Message> {
-    app.navigator_state.context_menu_root = Some(path);
-    app.navigator_state.context_menu_open = true;
+    app.directories_state.context_menu_root = Some(path);
+    app.directories_state.context_menu_open = true;
     Task::none()
 }
 
 pub fn handle_close_root_context_menu(app: &mut App) -> Task<Message> {
-    app.navigator_state.context_menu_open = false;
-    app.navigator_state.context_menu_root = None;
+    app.directories_state.context_menu_open = false;
+    app.directories_state.context_menu_root = None;
     Task::none()
 }

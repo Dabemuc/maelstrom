@@ -2,7 +2,7 @@ pub mod catalog;
 pub mod develop;
 pub mod helpers;
 pub mod import;
-pub mod navigator;
+pub mod directories;
 pub mod pane_grid;
 pub mod preview;
 pub mod selection;
@@ -25,17 +25,17 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             catalog::handle_catalog_load_attempted(app, result)
         }
         Message::CatalogLoaded => catalog::handle_catalog_loaded(app),
-        Message::NavigatorCollapseAll => navigator::handle_navigator_collapse_all(app),
+        Message::DirectoriesCollapseAll => directories::handle_directories_collapse_all(app),
         Message::ImportDirectory => import::handle_import_directory(app),
         Message::LoadImportedDirectories => import::handle_load_imported_directories(app),
         Message::ImportedDirectoriesLoadAttempted(result) => {
             import::handle_imported_directories_load_attempted(app, result)
         }
         Message::ErrorMessage(msg) => workspace::handle_error_message(app, msg),
-        Message::ToggleDirectory(path) => navigator::handle_toggle_directory(app, path),
-        Message::SelectDirectory(path) => navigator::handle_select_directory(app, path),
-        Message::OpenRootContextMenu(path) => navigator::handle_open_root_context_menu(app, path),
-        Message::CloseRootContextMenu => navigator::handle_close_root_context_menu(app),
+        Message::ToggleDirectory(path) => directories::handle_toggle_directory(app, path),
+        Message::SelectDirectory(path) => directories::handle_select_directory(app, path),
+        Message::OpenRootContextMenu(path) => directories::handle_open_root_context_menu(app, path),
+        Message::CloseRootContextMenu => directories::handle_close_root_context_menu(app),
         Message::RefreshImportedRoot(root) => workspace::handle_refresh_imported_root(app, root),
         Message::WorkspaceRootScanned((root, scan_result)) => {
             workspace::handle_workspace_root_scanned(app, root, scan_result)

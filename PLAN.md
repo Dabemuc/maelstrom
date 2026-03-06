@@ -15,7 +15,7 @@
   - [ ] -> Keep previews in state
   - [ ] -> integrate image counts into workspace state
 ## Sidebars
-- [x] Navigator
+- [x] Directories
   - [x] shows all imported directories from catalog 
   - [x] lets user set Working directory by clicking
   - [ ] Opption to remove directory
