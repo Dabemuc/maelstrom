@@ -6,13 +6,13 @@ use crate::components::linear_image_view::LinearImageView;
 use crate::message::Message;
 use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{Preview, PreviewState, ViewMode};
+use iced::Alignment::Center;
 use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
 use iced::widget::{
-    button, column, container, image, mouse_area, pick_list, responsive, row, scrollable, svg,
-    text, Space,
+    Space, button, column, container, image, mouse_area, pick_list, responsive, row, scrollable,
+    svg, text,
 };
-use iced::Alignment::Center;
 use iced::{Alignment, Element, Length};
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {

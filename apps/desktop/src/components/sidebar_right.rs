@@ -4,15 +4,15 @@ use crate::message::Message;
 use crate::state::ViewMode;
 use iced::alignment::Horizontal::Right;
 use iced::widget::{
-    button, checkbox, column, container, responsive, row, slider, text, text_input, Scrollable,
-    Space,
+    Scrollable, Space, button, checkbox, column, container, responsive, row, slider, text,
+    text_input,
 };
 use iced::{Alignment, Element, Length};
 use io::catalog::edit_graph::{EditNodeKind, NodeParameters, ParamType, ParamValue};
-use time::format_description;
-use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 use time::PrimitiveDateTime;
+use time::format_description;
+use time::format_description::well_known::Rfc3339;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RightSidebarMode {
@@ -22,25 +22,14 @@ pub enum RightSidebarMode {
 }
 
 pub fn sidebar_right(state: &App) -> Element<'_, Message> {
-    let main_content = match state.view_mode {
-        ViewMode::Library => match state.right_sidebar_mode {
-            RightSidebarMode::Metadata => metadata_view(state),
-            _ => text(format!(
-                "No view for view mode {:?} and right sidebar mode {:?}",
-                state.view_mode, state.right_sidebar_mode
-            ))
-            .into(),
-        },
-
-        ViewMode::Develop => match state.right_sidebar_mode {
-            RightSidebarMode::Operations => operations_view(state),
-            _ => text(format!(
-                "No view for view mode {:?} and right sidebar mode {:?}",
-                state.view_mode, state.right_sidebar_mode
-            ))
-            .into(),
-        },
-        _ => text(format!("No view for view mode {:?}", state.view_mode)).into(),
+    let main_content = match (state.view_mode.clone(), state.right_sidebar_mode) {
+        (_, RightSidebarMode::Metadata) => metadata_view(state),
+        (ViewMode::Develop, RightSidebarMode::Operations) => operations_view(state),
+        (_, _) => text(format!(
+            "No view for view mode {:?} and right sidebar mode {:?}. If you see this, there is a bug!",
+            state.view_mode, state.right_sidebar_mode
+        ))
+        .into(),
     };
 
     let content = row![
@@ -114,7 +103,7 @@ fn operations_view(state: &App) -> Element<'_, Message> {
     let mut content = column![section_title("Operations")].spacing(8);
 
     for &kind in EditNodeKind::all() {
-        let mut default_node = kind.default_node();
+        let default_node = kind.default_node();
         let node = develop_state
             .edit_graph
             .nodes

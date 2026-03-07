@@ -4,13 +4,13 @@ use std::time::SystemTime;
 
 use iced::widget::image::Handle;
 use image::image_dimensions;
-use io::catalog::catalog::Catalog;
 use io::catalog::ImageDO;
+use io::catalog::catalog::Catalog;
 use io::image_files::helpers::FolderScanResult;
 use io::metadata::metadata::Metadata;
 use previews::preview_generation::PREVIEW_FILE_TYPE;
-use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
 
 use crate::app::App;
 use crate::business::workspace::WorkspaceScanResult;

@@ -8,7 +8,10 @@ use maelstrom_image::linear_image::LinearImage;
 use crate::{
     app::App,
     message::Message,
-    state::{develop::{DevelopState, ParamKey}, state_error::StateError},
+    state::{
+        develop::{DevelopState, ParamKey},
+        state_error::StateError,
+    },
 };
 
 pub fn handle_develop_state_loaded(
@@ -197,11 +200,7 @@ pub fn handle_develop_param_changed(
     let original_linear_image = state.original_linear_image.clone();
 
     Task::perform(
-        async move {
-            graph
-                .compile()
-                .execute(original_linear_image, Backend::Cpu)
-        },
+        async move { graph.compile().execute(original_linear_image, Backend::Cpu) },
         Message::ImageDeveloped,
     )
 }
@@ -240,17 +239,11 @@ pub fn handle_develop_param_input_changed(
             .ok()
             .map(|parsed| {
                 let clamped = parsed.clamp(min, max);
-                let changed = apply_param_change(
-                    state,
-                    kind,
-                    name.as_str(),
-                    ParamValue::Float(clamped),
-                );
+                let changed =
+                    apply_param_change(state, kind, name.as_str(), ParamValue::Float(clamped));
 
                 if (clamped - parsed).abs() > f32::EPSILON {
-                    state
-                        .param_inputs
-                        .insert(key, format!("{:.2}", clamped));
+                    state.param_inputs.insert(key, format!("{:.2}", clamped));
                 }
 
                 changed
@@ -261,12 +254,8 @@ pub fn handle_develop_param_input_changed(
             .ok()
             .map(|parsed| {
                 let clamped = parsed.clamp(min, max);
-                let changed = apply_param_change(
-                    state,
-                    kind,
-                    name.as_str(),
-                    ParamValue::Int(clamped),
-                );
+                let changed =
+                    apply_param_change(state, kind, name.as_str(), ParamValue::Int(clamped));
 
                 if clamped != parsed {
                     state.param_inputs.insert(key, clamped.to_string());
@@ -286,11 +275,7 @@ pub fn handle_develop_param_input_changed(
     let original_linear_image = state.original_linear_image.clone();
 
     Task::perform(
-        async move {
-            graph
-                .compile()
-                .execute(original_linear_image, Backend::Cpu)
-        },
+        async move { graph.compile().execute(original_linear_image, Backend::Cpu) },
         Message::ImageDeveloped,
     )
 }

@@ -3,6 +3,7 @@ use crate::business::workspace::FolderNode;
 use crate::components::common::svg_button::icon_button;
 use crate::components::divider::divider;
 use crate::message::Message;
+use crate::state::ViewMode;
 use iced::Alignment::Center;
 use iced::alignment::Horizontal::Right;
 use iced::border::Radius;
@@ -22,11 +23,15 @@ pub enum LeftSidebarMode {
 
 pub fn sidebar_left(state: &App) -> Element<'_, Message> {
     let content = row![
-        container(match state.left_sidebar_mode {
-            LeftSidebarMode::Directories => directories_view(state),
-            LeftSidebarMode::Collections => collections_view(state),
-            LeftSidebarMode::Navigator => navigator_view(state),
-            LeftSidebarMode::Hidden => text("Hidden").into(),
+        container(match (state.view_mode.clone(), state.left_sidebar_mode) {
+            (ViewMode::Library, LeftSidebarMode::Directories) => directories_view(state),
+            (ViewMode::Library, LeftSidebarMode::Collections) => collections_view(state),
+            (ViewMode::Develop, LeftSidebarMode::Navigator) => navigator_view(state),
+            (_, _) => text(format!(
+                "No view for view mode {:?} and left sidebar mode {:?}. If you see this, there is a bug!",
+                state.view_mode, state.right_sidebar_mode
+            ))
+            .into(),
         })
         .width(Length::Fill)
         .height(Length::Fill)

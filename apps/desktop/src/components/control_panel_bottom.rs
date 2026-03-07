@@ -8,7 +8,7 @@ use iced::widget::{Space, button, container, row, svg, text};
 use iced::{Alignment, Element, Length};
 
 pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
-    let left_controls = match state.view_mode {
+    let mut left_controls = match state.view_mode {
         ViewMode::Library => row![
             icon_button(
                 svg::Handle::from_memory(include_bytes!("../../assets/icons/folder.svg")),
@@ -38,6 +38,8 @@ pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
         .spacing(10),
         _ => row![],
     };
+
+    left_controls = left_controls.push(Space::new().width(Length::Fill));
 
     let mut library_button = button(text("Library").size(14)).padding([6, 10]).style(
         |theme: &iced::Theme, status: iced::widget::button::Status| {
@@ -70,47 +72,46 @@ pub fn control_panel_bottom(state: &App) -> Element<'_, Message> {
         develop_button = develop_button.on_press(Message::ViewModeSelected(ViewMode::Develop));
     }
 
-    let center_controls = row![library_button, develop_button].spacing(8);
+    let center_controls = row![
+        Space::new().width(Length::Fill),
+        library_button,
+        develop_button,
+        Space::new().width(Length::Fill)
+    ]
+    .spacing(8);
 
-    let right_controls = match state.view_mode {
-        ViewMode::Library => row![
-            icon_button(
-                svg::Handle::from_memory(include_bytes!("../../assets/icons/metadata.svg")),
-                "Metadata",
-                state.right_sidebar_mode == RightSidebarMode::Metadata,
-                0.0
-            )
-            .on_press(Message::RightSidebarClicked(RightSidebarMode::Metadata)),
-        ]
-        .spacing(10),
-        ViewMode::Develop => row![
-            icon_button(
-                svg::Handle::from_memory(include_bytes!("../../assets/icons/metadata.svg")),
-                "Metadata",
-                state.right_sidebar_mode == RightSidebarMode::Metadata,
-                0.0
-            )
-            .on_press(Message::RightSidebarClicked(RightSidebarMode::Metadata)),
+    let mut right_controls = row![
+        Space::new().width(Length::Fill),
+        icon_button(
+            svg::Handle::from_memory(include_bytes!("../../assets/icons/metadata.svg")),
+            "Metadata",
+            state.right_sidebar_mode == RightSidebarMode::Metadata,
+            0.0
+        )
+        .on_press(Message::RightSidebarClicked(RightSidebarMode::Metadata)),
+    ]
+    .spacing(10);
+
+    if state.view_mode == ViewMode::Develop {
+        right_controls = right_controls.push(
             icon_button(
                 svg::Handle::from_memory(include_bytes!("../../assets/icons/edit.svg")),
                 "Develop",
                 state.right_sidebar_mode == RightSidebarMode::Operations,
-                0.0
+                0.0,
             )
             .on_press(Message::RightSidebarClicked(RightSidebarMode::Operations)),
-        ],
-        _ => row![],
-    };
+        );
+    }
 
     container(
         row![
-            left_controls,
-            Space::new().width(Length::Fill),
-            center_controls,
-            Space::new().width(Length::Fill),
-            right_controls,
+            left_controls.width(Length::Fill),
+            center_controls.width(Length::Fill),
+            right_controls.width(Length::Fill),
         ]
-        .align_y(Alignment::Center),
+        .align_y(Alignment::Center)
+        .width(Length::Fill),
     )
     .padding(5)
     .width(Length::Fill)

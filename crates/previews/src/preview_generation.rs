@@ -2,12 +2,7 @@ use std::path::PathBuf;
 
 use graph::{graph::Graph, node::Backend};
 use io::{
-    catalog::{
-        EditGraph,
-        ImageDO,
-        catalog::Catalog,
-        catalog_error::CatalogError,
-    },
+    catalog::{EditGraph, ImageDO, catalog::Catalog, catalog_error::CatalogError},
     image_files::supported_image_file_types::{SaveOptions, SupportedFileTypes},
 };
 use maelstrom_core::{color::color_space::ColorSpace, hash::hash_file};

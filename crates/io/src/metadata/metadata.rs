@@ -1,4 +1,3 @@
-
 use exif::{In, Reader, Tag, Value};
 use std::error::Error;
 use std::fs::File;
