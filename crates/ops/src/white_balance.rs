@@ -1,6 +1,11 @@
 use graph::node::{Backend, Node};
 use image::linear_image::LinearImage;
 
+// References:
+// - Planckian locus xy approximation: Wyszecki & Stiles / McCamy-style polynomial fits.
+// - Bradford chromatic adaptation: CIECAM97s / Bradford transform (RGB <-> LMS matrices).
+// - Linear sRGB <-> XYZ matrices: IEC 61966-2-1 (D65).
+
 pub struct WhiteBalance {
     pub temp_val: f32,
     pub tint_val: f32,
@@ -14,14 +19,18 @@ impl Node for WhiteBalance {
     fn process_cpu(&self, input: &LinearImage) -> LinearImage {
         let mut output = input.clone();
 
+        // Temperature: approximate Planckian locus in CIE xy, then convert to XYZ (Y=1).
         let xy = kelvin_to_xy(self.temp_val);
 
         let dst_xyz = xy_to_xyz(xy);
 
-        let src_xyz = [0.95047, 1.0, 1.08883]; // D65
+        // Working space is linear sRGB (D65), so use D65 as source white.
+        let src_xyz = [0.95047, 1.0, 1.08883];
 
+        // Bradford chromatic adaptation in XYZ, then map back to linear sRGB.
         let m_adapt = bradford_adaptation(dst_xyz, src_xyz);
         let m_wb = mul_mat3(xyz_to_rgb(), mul_mat3(m_adapt, rgb_to_xyz()));
+        // Tint: adjust the Bradford LMS M channel (green-magenta axis) for stability.
         let m_tint = tint_lms_matrix(self.tint_val);
         let m = mul_mat3(m_tint, m_wb);
 
@@ -40,6 +49,7 @@ impl Node for WhiteBalance {
 }
 
 fn kelvin_to_xy(t: f32) -> [f32; 2] {
+    // Approximate Planckian locus (CIE 1960 UCS) via McCamy-style polynomial.
     let x;
 
     if (1667.0..=4000.0).contains(&t) {
@@ -57,6 +67,7 @@ fn xy_to_xyz(xy: [f32; 2]) -> [f32; 3] {
     let x = xy[0];
     let y = xy[1];
 
+    // Normalize to Y=1 luminance for chromatic adaptation.
     let x_o = x / y;
     let y_o = 1.0;
     let z_o = (1.0 - x - y) / y;
@@ -65,6 +76,7 @@ fn xy_to_xyz(xy: [f32; 2]) -> [f32; 3] {
 }
 
 fn rgb_to_xyz() -> [[f32; 3]; 3] {
+    // Linear sRGB (D65) to XYZ matrix.
     [
         [0.4124564, 0.3575761, 0.1804375],
         [0.2126729, 0.7151522, 0.0721750],
@@ -73,6 +85,7 @@ fn rgb_to_xyz() -> [[f32; 3]; 3] {
 }
 
 fn xyz_to_rgb() -> [[f32; 3]; 3] {
+    // XYZ to linear sRGB (D65) matrix.
     [
         [3.2404542, -1.5371385, -0.4985314],
         [-0.9692660, 1.8760108, 0.0415560],
@@ -81,6 +94,7 @@ fn xyz_to_rgb() -> [[f32; 3]; 3] {
 }
 
 fn bradford_adaptation(src_xyz: [f32; 3], dst_xyz: [f32; 3]) -> [[f32; 3]; 3] {
+    // Bradford matrix for chromatic adaptation between illuminants.
     let mb = [
         [0.8951, 0.2664, -0.1614],
         [-0.7502, 1.7135, 0.0367],
@@ -132,6 +146,7 @@ fn mul_mat3(a: [[f32; 3]; 3], b: [[f32; 3]; 3]) -> [[f32; 3]; 3] {
 }
 
 fn tint_lms_matrix(tint_val: f32) -> [[f32; 3]; 3] {
+    // Tint in LMS: scale the M channel (green-magenta axis) in Bradford LMS space.
     let tint = (-tint_val / 300.0).clamp(-1.0, 1.0);
     let m_scale = 1.0 + tint * 1.2;
 
