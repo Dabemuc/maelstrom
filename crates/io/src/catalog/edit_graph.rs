@@ -103,9 +103,9 @@ impl NodeParameters for WhiteBalanceNode {
                 name: "tint_val",
                 label: "Tint",
                 ty: ParamType::Float {
-                    min: -1.0,
-                    max: 1.0,
-                    step: 0.05,
+                    min: -300.0,
+                    max: 300.0,
+                    step: 1.0,
                 },
             },
         ];
