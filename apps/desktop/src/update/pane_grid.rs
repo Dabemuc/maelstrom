@@ -1,5 +1,5 @@
-use iced::widget::pane_grid;
 use iced::Task;
+use iced::widget::pane_grid;
 
 use crate::app::App;
 use crate::message::Message;

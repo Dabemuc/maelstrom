@@ -2,10 +2,10 @@ mod app;
 mod business;
 mod components;
 mod message;
+mod render;
 mod state;
 mod theme;
 mod update;
-mod render;
 
 use app::App;
 

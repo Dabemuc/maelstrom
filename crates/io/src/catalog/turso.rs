@@ -109,10 +109,7 @@ impl TursoDB {
         Ok(rows.next().await?.is_some())
     }
 
-    pub async fn get_edit_graph_json(
-        &self,
-        content_hash: &str,
-    ) -> turso::Result<Option<String>> {
+    pub async fn get_edit_graph_json(&self, content_hash: &str) -> turso::Result<Option<String>> {
         let mut rows = self
             .conn
             .query(

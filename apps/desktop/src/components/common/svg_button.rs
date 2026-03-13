@@ -1,8 +1,8 @@
 use crate::components::common::styled_tooltip::styled_tooltip;
 use crate::message::Message;
+use iced::Length;
 use iced::widget::tooltip::Position;
 use iced::widget::{button, svg};
-use iced::Length;
 
 pub fn icon_button<'a>(
     handle: svg::Handle,

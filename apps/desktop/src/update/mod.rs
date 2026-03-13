@@ -1,8 +1,8 @@
 pub mod catalog;
 pub mod develop;
+pub mod directories;
 pub mod helpers;
 pub mod import;
-pub mod directories;
 pub mod pane_grid;
 pub mod preview;
 pub mod selection;
@@ -63,7 +63,9 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::ImageDeveloped(linear_image) => develop::handle_image_developed(app, linear_image),
         Message::DevelopZoomSet(zoom) => develop::handle_develop_zoom_set(app, zoom),
         Message::DevelopZoomBy(factor) => develop::handle_develop_zoom_by(app, factor),
-        Message::DevelopZoomSetPan { zoom, pan } => develop::handle_develop_zoom_set_pan(app, zoom, pan),
+        Message::DevelopZoomSetPan { zoom, pan } => {
+            develop::handle_develop_zoom_set_pan(app, zoom, pan)
+        }
         Message::DevelopFitToScreen => develop::handle_develop_fit_to_screen(app),
         Message::DevelopPanBy { delta } => develop::handle_develop_pan_by(app, delta),
         Message::DevelopParamChanged { kind, name, value } => {

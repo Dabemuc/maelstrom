@@ -1,7 +1,7 @@
 use super::turso::TursoDB;
+use crate::catalog::EditGraph;
 use crate::catalog::catalog_error::CatalogError;
 use crate::catalog::turso::ImageDO;
-use crate::catalog::EditGraph;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -236,8 +236,8 @@ impl Catalog {
         content_hash: &str,
         graph: &EditGraph,
     ) -> Result<(), CatalogError> {
-        let graph_json = serde_json::to_string(graph)
-            .map_err(|e| CatalogError::Database(e.to_string()))?;
+        let graph_json =
+            serde_json::to_string(graph).map_err(|e| CatalogError::Database(e.to_string()))?;
         self.db
             .set_edit_graph_json(content_hash, &graph_json)
             .await?;
