@@ -52,21 +52,19 @@ impl Metadata {
         }
 
         // Aperture
-        if let Some(field) = exif.get_field(Tag::FNumber, In::PRIMARY) {
-            if let Value::Rational(ref vec) = field.value {
-                if let Some(r) = vec.first() {
-                    metadata.aperture = Some(r.to_f64() as f32);
-                }
-            }
+        if let Some(field) = exif.get_field(Tag::FNumber, In::PRIMARY)
+            && let Value::Rational(ref vec) = field.value
+            && let Some(r) = vec.first()
+        {
+            metadata.aperture = Some(r.to_f64() as f32);
         }
 
         // Focal length
-        if let Some(field) = exif.get_field(Tag::FocalLength, In::PRIMARY) {
-            if let Value::Rational(ref vec) = field.value {
-                if let Some(r) = vec.first() {
-                    metadata.focal_length = Some(r.to_f64() as f32);
-                }
-            }
+        if let Some(field) = exif.get_field(Tag::FocalLength, In::PRIMARY)
+            && let Value::Rational(ref vec) = field.value
+            && let Some(r) = vec.first()
+        {
+            metadata.focal_length = Some(r.to_f64() as f32);
         }
 
         // Camera make
@@ -85,56 +83,56 @@ impl Metadata {
         }
 
         // Orientation
-        if let Some(field) = exif.get_field(Tag::Orientation, In::PRIMARY) {
-            if let Value::Short(ref vec) = field.value {
-                metadata.orientation = vec.first().copied();
-            }
+        if let Some(field) = exif.get_field(Tag::Orientation, In::PRIMARY)
+            && let Value::Short(ref vec) = field.value
+        {
+            metadata.orientation = vec.first().copied();
         }
 
         // GPS Latitude
         let lat = exif.get_field(Tag::GPSLatitude, In::PRIMARY);
         let lat_ref = exif.get_field(Tag::GPSLatitudeRef, In::PRIMARY);
 
-        if let (Some(lat), Some(lat_ref)) = (lat, lat_ref) {
-            if let (Value::Rational(vec), Value::Ascii(ascii)) = (&lat.value, &lat_ref.value) {
-                if vec.len() == 3 && !ascii.is_empty() {
-                    let deg = vec[0].to_f64();
-                    let min = vec[1].to_f64();
-                    let sec = vec[2].to_f64();
+        if let (Some(lat), Some(lat_ref)) = (lat, lat_ref)
+            && let (Value::Rational(vec), Value::Ascii(ascii)) = (&lat.value, &lat_ref.value)
+            && vec.len() == 3
+            && !ascii.is_empty()
+        {
+            let deg = vec[0].to_f64();
+            let min = vec[1].to_f64();
+            let sec = vec[2].to_f64();
 
-                    let mut value = deg + (min / 60.0) + (sec / 3600.0);
+            let mut value = deg + (min / 60.0) + (sec / 3600.0);
 
-                    let dir = std::str::from_utf8(&ascii[0])?;
-                    if dir.trim() == "S" {
-                        value = -value;
-                    }
-
-                    metadata.gps_latitude = Some(value);
-                }
+            let dir = std::str::from_utf8(&ascii[0])?;
+            if dir.trim() == "S" {
+                value = -value;
             }
+
+            metadata.gps_latitude = Some(value);
         }
 
         // GPS Longitude
         let lon = exif.get_field(Tag::GPSLongitude, In::PRIMARY);
         let lon_ref = exif.get_field(Tag::GPSLongitudeRef, In::PRIMARY);
 
-        if let (Some(lon), Some(lon_ref)) = (lon, lon_ref) {
-            if let (Value::Rational(vec), Value::Ascii(ascii)) = (&lon.value, &lon_ref.value) {
-                if vec.len() == 3 && !ascii.is_empty() {
-                    let deg = vec[0].to_f64();
-                    let min = vec[1].to_f64();
-                    let sec = vec[2].to_f64();
+        if let (Some(lon), Some(lon_ref)) = (lon, lon_ref)
+            && let (Value::Rational(vec), Value::Ascii(ascii)) = (&lon.value, &lon_ref.value)
+            && vec.len() == 3
+            && !ascii.is_empty()
+        {
+            let deg = vec[0].to_f64();
+            let min = vec[1].to_f64();
+            let sec = vec[2].to_f64();
 
-                    let mut value = deg + (min / 60.0) + (sec / 3600.0);
+            let mut value = deg + (min / 60.0) + (sec / 3600.0);
 
-                    let dir = std::str::from_utf8(&ascii[0])?;
-                    if dir.trim() == "W" {
-                        value = -value;
-                    }
-
-                    metadata.gps_longitude = Some(value);
-                }
+            let dir = std::str::from_utf8(&ascii[0])?;
+            if dir.trim() == "W" {
+                value = -value;
             }
+
+            metadata.gps_longitude = Some(value);
         }
 
         Ok(metadata)

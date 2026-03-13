@@ -102,11 +102,11 @@ impl LinearImagePipeline {
         bounds: &Rectangle,
         viewport: &Viewport,
     ) {
-        if let Some(cache) = &self.cached_texture {
-            if Arc::ptr_eq(&cache.image, image) {
-                self.update_transform(queue, image, zoom, zoom_mode, pan, bounds, viewport);
-                return;
-            }
+        if let Some(cache) = &self.cached_texture
+            && Arc::ptr_eq(&cache.image, image)
+        {
+            self.update_transform(queue, image, zoom, zoom_mode, pan, bounds, viewport);
+            return;
         }
 
         let size = wgpu::Extent3d {

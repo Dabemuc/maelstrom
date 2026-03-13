@@ -316,22 +316,20 @@ fn build_folder_tree(
         col = col.push(selectable_row);
     }
 
-    if is_expanded {
-        if let Some(node) = node {
-            let mut children = node.children.clone();
-            children.sort();
+    if is_expanded && let Some(node) = node {
+        let mut children = node.children.clone();
+        children.sort();
 
-            for child_path in children {
-                col = col.push(build_folder_tree(
-                    &child_path,
-                    expanded,
-                    selected,
-                    folder_index,
-                    context_menu_root,
-                    context_menu_open,
-                    depth + 1,
-                ));
-            }
+        for child_path in children {
+            col = col.push(build_folder_tree(
+                &child_path,
+                expanded,
+                selected,
+                folder_index,
+                context_menu_root,
+                context_menu_open,
+                depth + 1,
+            ));
         }
     }
 
