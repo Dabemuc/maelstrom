@@ -1,3 +1,4 @@
+#![allow(clippy::excessive_precision)]
 pub mod downsample;
 pub mod downsample_fixed;
 pub mod exposure;

@@ -50,17 +50,15 @@ impl Node for WhiteBalance {
 
 fn kelvin_to_xy(t: f32) -> [f32; 2] {
     // Approximate Planckian locus (CIE 1960 UCS) via McCamy-style polynomial.
-    let x;
-
-    if (1667.0..=4000.0).contains(&t) {
-        x = -0.2661239e9 / (t * t * t) - 0.2343580e6 / (t * t) + 0.8776956e3 / t + 0.179910;
+    let x = if (1667.0..=4000.0).contains(&t) {
+        -0.2661239e9 / (t * t * t) - 0.2343580e6 / (t * t) + 0.8776956e3 / t + 0.179910
     } else {
-        x = -3.0258469e9 / (t * t * t) + 2.1070379e6 / (t * t) + 0.2226347e3 / t + 0.240390;
-    }
+        -3.0258469e9 / (t * t * t) + 2.1070379e6 / (t * t) + 0.2226347e3 / t + 0.240390
+    };
 
     let y = -3.0 * x * x + 2.87 * x - 0.275;
 
-    [x as f32, y as f32]
+    [x, y]
 }
 
 fn xy_to_xyz(xy: [f32; 2]) -> [f32; 3] {

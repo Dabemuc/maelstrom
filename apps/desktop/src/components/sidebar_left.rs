@@ -11,7 +11,7 @@ use iced::widget::scrollable::Scrollbar;
 use iced::widget::{Space, button, column, container, mouse_area, responsive, row, svg, text};
 use iced::{Element, Length};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LeftSidebarMode {
@@ -344,7 +344,7 @@ fn build_folder_tree(
     col.into()
 }
 
-fn build_root_context_menu(root: &PathBuf, is_scanning: bool) -> Element<'static, Message> {
+fn build_root_context_menu(root: &Path, is_scanning: bool) -> Element<'static, Message> {
     let refresh_button = {
         let button = button(
             text(if is_scanning {
@@ -360,7 +360,7 @@ fn build_root_context_menu(root: &PathBuf, is_scanning: bool) -> Element<'static
         if is_scanning {
             button
         } else {
-            button.on_press(Message::RefreshImportedRoot(root.clone()))
+            button.on_press(Message::RefreshImportedRoot(root.to_path_buf()))
         }
     };
 

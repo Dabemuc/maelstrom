@@ -111,7 +111,7 @@ pub async fn generate_preview_for_image(
     let preview_path = preview_path_buf.to_str().unwrap();
     if let Err(e) = PREVIEW_FILE_TYPE.save(
         &result,
-        &preview_path,
+        preview_path,
         ColorSpace::Srgb,
         Some(SaveOptions { quality: 50 }),
     ) {
@@ -125,15 +125,15 @@ pub async fn generate_preview_for_image(
             .add_image(&content_hash, path_to_img.to_str().unwrap())
             .await
         {
-            Ok(image_do) => return Ok(image_do),
+            Ok(image_do) => Ok(image_do),
             Err(e) => {
                 eprintln!("Failed to insert image hash into catalog: {}", e);
-                return Err(PreviewGenerationError::CatalogError(e));
+                Err(PreviewGenerationError::CatalogError(e))
             }
         }
     } else {
-        return Err(PreviewGenerationError::AlreadyExists);
-    };
+        Err(PreviewGenerationError::AlreadyExists)
+    }
 }
 
 pub async fn generate_preview_for_image_with_graph(
@@ -177,7 +177,7 @@ pub async fn generate_preview_for_image_with_graph(
     let preview_path = preview_path_buf.to_str().unwrap();
     if let Err(e) = PREVIEW_FILE_TYPE.save(
         &result,
-        &preview_path,
+        preview_path,
         ColorSpace::Srgb,
         Some(SaveOptions { quality: 50 }),
     ) {

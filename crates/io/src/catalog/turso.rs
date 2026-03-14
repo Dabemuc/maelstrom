@@ -176,10 +176,7 @@ impl TursoDB {
         while let Some(row) = rows.next().await? {
             let path: String = row.get(0)?;
             let hash: String = row.get(1)?;
-            image_dos.push(ImageDO {
-                path: path,
-                hash: hash,
-            });
+            image_dos.push(ImageDO { path, hash });
         }
         Ok(image_dos)
     }
