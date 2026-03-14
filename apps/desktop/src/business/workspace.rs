@@ -79,7 +79,7 @@ impl WorkspaceModel {
         self.previews_by_folder.clear();
     }
 
-    /// Incrementally updates a single imported root with a fresh scan result.
+    /// Incrementally updates a single managed root with a fresh scan result.
     ///
     /// This keeps data for other roots untouched and only replaces:
     /// - folder/count state under `root`
@@ -157,12 +157,12 @@ impl WorkspaceModel {
 }
 
 fn build_folder_index(
-    imported_roots: &[PathBuf],
+    managed_roots: &[PathBuf],
     discovered_folders: HashSet<PathBuf>,
     direct_counts_by_folder: HashMap<PathBuf, usize>,
 ) -> HashMap<PathBuf, FolderNode> {
     let mut folders = discovered_folders;
-    folders.extend(imported_roots.iter().cloned());
+    folders.extend(managed_roots.iter().cloned());
 
     let mut index: HashMap<PathBuf, FolderNode> = HashMap::new();
 
@@ -172,7 +172,7 @@ fn build_folder_index(
             .or_insert_with(|| FolderNode::new(folder.clone()));
     }
 
-    // Parent/child links (only for folders inside imported roots and discovered set).
+    // Parent/child links (only for folders inside managed roots and discovered set).
     for folder in &folders {
         if let Some(parent) = folder.parent() {
             let parent_buf = parent.to_path_buf();

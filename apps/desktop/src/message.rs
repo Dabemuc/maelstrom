@@ -1,20 +1,20 @@
 use std::path::PathBuf;
 
 use iced::widget::pane_grid;
-use io::catalog::ImageDO;
 use io::catalog::catalog::Catalog;
 use io::catalog::catalog_error::CatalogError;
 use io::catalog::edit_graph::{EditNodeKind, ParamValue};
+use io::catalog::ImageDO;
 use io::image_files::helpers::FolderScanResult;
 use maelstrom_image::linear_image::LinearImage;
 use previews::preview_generation::PreviewGenerationError;
 
 use crate::components::sidebar_left::LeftSidebarMode;
 use crate::components::sidebar_right::RightSidebarMode;
-use crate::state::ViewMode;
 use crate::state::develop::DevelopState;
 use crate::state::state_error::StateError;
 use crate::state::workspace::SortingOption;
+use crate::state::ViewMode;
 use crate::state::{Preview, SelectionDiffData};
 
 #[derive(Debug, Clone)]
@@ -27,15 +27,15 @@ pub enum Message {
     CatalogLoadAttempted(Result<Catalog, CatalogError>),
     CatalogLoaded,
     DirectoriesCollapseAll,
-    ImportDirectory,
-    LoadImportedDirectories,
-    ImportedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
+    AddManagedDirectory,
+    LoadManagedDirectories,
+    ManagedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
     Notification(String),
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
     OpenRootContextMenu(PathBuf),
     CloseRootContextMenu,
-    RefreshImportedRoot(PathBuf),
+    RefreshManagedRoot(PathBuf),
     WorkspaceRootScanned((PathBuf, FolderScanResult)),
     SelectionCatalogLoaded(Result<(u64, PathBuf, Vec<ImageDO>), CatalogError>),
     SelectionDiffComputed(SelectionDiffData),

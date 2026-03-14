@@ -2,7 +2,7 @@ pub mod catalog;
 pub mod develop;
 pub mod directories;
 pub mod helpers;
-pub mod import;
+pub mod managed;
 pub mod pane_grid;
 pub mod preview;
 pub mod selection;
@@ -26,17 +26,17 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         }
         Message::CatalogLoaded => catalog::handle_catalog_loaded(app),
         Message::DirectoriesCollapseAll => directories::handle_directories_collapse_all(app),
-        Message::ImportDirectory => import::handle_import_directory(app),
-        Message::LoadImportedDirectories => import::handle_load_imported_directories(app),
-        Message::ImportedDirectoriesLoadAttempted(result) => {
-            import::handle_imported_directories_load_attempted(app, result)
+        Message::AddManagedDirectory => managed::handle_add_managed_directory(app),
+        Message::LoadManagedDirectories => managed::handle_load_managed_directories(app),
+        Message::ManagedDirectoriesLoadAttempted(result) => {
+            managed::handle_managed_directories_load_attempted(app, result)
         }
         Message::Notification(msg) => workspace::handle_error_message(app, msg),
         Message::ToggleDirectory(path) => directories::handle_toggle_directory(app, path),
         Message::SelectDirectory(path) => directories::handle_select_directory(app, path),
         Message::OpenRootContextMenu(path) => directories::handle_open_root_context_menu(app, path),
         Message::CloseRootContextMenu => directories::handle_close_root_context_menu(app),
-        Message::RefreshImportedRoot(root) => workspace::handle_refresh_imported_root(app, root),
+        Message::RefreshManagedRoot(root) => workspace::handle_refresh_managed_root(app, root),
         Message::WorkspaceRootScanned((root, scan_result)) => {
             workspace::handle_workspace_root_scanned(app, root, scan_result)
         }

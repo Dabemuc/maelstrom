@@ -61,8 +61,8 @@ fn directories_view(state: &App) -> Element<'_, Message> {
         return text("No Catalog").into();
     }
 
-    let roots: Vec<PathBuf> = if !state.imported_dirs.is_empty() {
-        state.imported_dirs.clone()
+    let roots: Vec<PathBuf> = if !state.managed_dirs.is_empty() {
+        state.managed_dirs.clone()
     } else {
         state.workspace_state.model.root_folders.clone()
     };
@@ -108,7 +108,7 @@ fn directories_view(state: &App) -> Element<'_, Message> {
 
         let content = column![
             row![
-                container(text("Imported Folders").width(Length::Shrink))
+                container(text("Managed Folders").width(Length::Shrink))
                     .padding(10)
                     .align_y(Center)
                     .clip(true),
@@ -123,11 +123,11 @@ fn directories_view(state: &App) -> Element<'_, Message> {
                     .on_press(Message::DirectoriesCollapseAll),
                     icon_button(
                         svg::Handle::from_memory(include_bytes!("../../assets/icons/plus.svg")),
-                        "Import new folder",
+                        "Add folder to manage",
                         false,
                         0.0
                     )
-                    .on_press(Message::ImportDirectory)
+                    .on_press(Message::AddManagedDirectory)
                 ]
             ]
             .align_y(Center)
@@ -360,7 +360,7 @@ fn build_root_context_menu(root: &Path, is_scanning: bool) -> Element<'static, M
         if is_scanning {
             button
         } else {
-            button.on_press(Message::RefreshImportedRoot(root.to_path_buf()))
+            button.on_press(Message::RefreshManagedRoot(root.to_path_buf()))
         }
     };
 

@@ -159,21 +159,24 @@ impl Catalog {
         &self.develop_cache_dir
     }
 
-    /// Imports a directory path into the catalog.
-    pub async fn import_directory(&self, path: impl AsRef<Path>) -> Result<(), CatalogError> {
+    /// Adds a managed directory path into the catalog.
+    pub async fn add_managed_directory(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<(), CatalogError> {
         let path_ref = path.as_ref();
 
         let path_str = path_ref
             .to_str()
             .ok_or_else(|| CatalogError::InvalidPathEncoding(path_ref.to_path_buf()))?;
 
-        self.db.add_imported_path(path_str).await?;
+        self.db.add_managed_path(path_str).await?;
         Ok(())
     }
 
-    /// Retrieves all imported directory paths.
-    pub async fn get_imported_directories(&self) -> Result<Vec<PathBuf>, CatalogError> {
-        let paths = self.db.get_imported_paths().await?;
+    /// Retrieves all managed directory paths.
+    pub async fn get_managed_directories(&self) -> Result<Vec<PathBuf>, CatalogError> {
+        let paths = self.db.get_managed_paths().await?;
         Ok(paths.into_iter().map(PathBuf::from).collect())
     }
 
@@ -244,7 +247,7 @@ impl Catalog {
         Ok(())
     }
 
-    /// Prints catalog metadata: version and imported directories.
+    /// Prints catalog metadata: version and managed directories.
     /// Returns an error if the database cannot be accessed.
     pub async fn print_metadata(&self) -> Result<(), CatalogError> {
         let version = self
@@ -254,11 +257,11 @@ impl Catalog {
             .map_err(|e| CatalogError::Database(e.to_string()))?
             .ok_or(CatalogError::MissingVersion)?;
 
-        let dirs = self.get_imported_directories().await?;
+        let dirs = self.get_managed_directories().await?;
 
         println!("Catalog root: {:?}", self.root);
         println!("Catalog version: {}", version);
-        println!("Imported directories:");
+        println!("Managed directories:");
         for dir in dirs {
             println!(" - {:?}", dir);
         }

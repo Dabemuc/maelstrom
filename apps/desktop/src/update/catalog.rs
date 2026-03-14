@@ -46,6 +46,6 @@ pub fn handle_catalog_load_attempted(
 pub fn handle_catalog_loaded(app: &mut App) -> Task<Message> {
     crate::app::startup_log("CatalogLoaded message received");
     app.view_mode = ViewMode::Library;
-    crate::app::startup_log("Dispatching LoadImportedDirectories");
-    Task::perform(async {}, |_| Message::LoadImportedDirectories)
+    crate::app::startup_log("Dispatching LoadManagedDirectories");
+    Task::perform(async {}, |_| Message::LoadManagedDirectories)
 }

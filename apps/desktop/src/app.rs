@@ -27,7 +27,7 @@ pub struct App {
     pub right_sidebar_mode: RightSidebarMode,
     pub view_mode: ViewMode,
     pub catalog: Option<Catalog>,
-    pub imported_dirs: Vec<PathBuf>,
+    pub managed_dirs: Vec<PathBuf>,
     pub directories_state: DirectoriesState,
     pub workspace_state: WorkspaceState,
     pub develop_state: Option<DevelopState>,
@@ -69,7 +69,7 @@ impl App {
             right_sidebar_mode: RightSidebarMode::Hidden,
             view_mode: ViewMode::NoCatalog,
             catalog: None,
-            imported_dirs: Vec::new(),
+            managed_dirs: Vec::new(),
             directories_state: DirectoriesState {
                 expanded: HashSet::new(),
                 selected: None,

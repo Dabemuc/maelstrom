@@ -1,8 +1,8 @@
 # Next steps
 ## Catalog
   - [x] Turso sqlite file that contains:
-    - [x] info about imported directories
-    - [ ] metadate of imported files
+    - [x] info about managed directories
+    - [ ] metadate of managed files
       - [ ] Nodegraph (if exists)
       - [x] preview file location
     - [ ] settings
@@ -16,7 +16,7 @@
   - [ ] -> integrate image counts into workspace state
 ## Sidebars
 - [x] Directories
-  - [x] shows all imported directories from catalog 
+  - [x] shows all managed directories from catalog 
   - [x] lets user set Working directory by clicking
   - [ ] Opption to remove directory
 - [ ] Scalable sidebars -> Store in settings table

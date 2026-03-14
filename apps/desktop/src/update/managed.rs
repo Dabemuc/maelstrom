@@ -8,19 +8,19 @@ use io::image_files::helpers::scan_folder_images;
 use crate::app::App;
 use crate::message::Message;
 
-pub fn handle_import_directory(app: &mut App) -> Task<Message> {
+pub fn handle_add_managed_directory(app: &mut App) -> Task<Message> {
     let Some(catalog) = app.catalog.clone() else {
-        println!("Cannot import directory: no catalog loaded");
+        println!("Cannot add managed directory: no catalog loaded");
         return Task::none();
     };
 
     if let Some(path) = rfd::FileDialog::new().pick_folder() {
         let catalog_clone = catalog.clone();
         Task::perform(
-            async move { catalog_clone.import_directory(path.clone()).await },
+            async move { catalog_clone.add_managed_directory(path.clone()).await },
             |res| match res {
-                Ok(_) => Message::LoadImportedDirectories,
-                Err(_e) => Message::Notification("Failed to import directory".into()),
+                Ok(_) => Message::LoadManagedDirectories,
+                Err(_e) => Message::Notification("Failed to add managed directory".into()),
             },
         )
     } else {
@@ -29,31 +29,31 @@ pub fn handle_import_directory(app: &mut App) -> Task<Message> {
     }
 }
 
-pub fn handle_load_imported_directories(app: &mut App) -> Task<Message> {
-    crate::app::startup_log("LoadImportedDirectories started");
+pub fn handle_load_managed_directories(app: &mut App) -> Task<Message> {
+    crate::app::startup_log("LoadManagedDirectories started");
     if let Some(catalog) = &app.catalog {
         let catalog_clone = catalog.clone();
         Task::perform(
-            async move { catalog_clone.get_imported_directories().await },
-            Message::ImportedDirectoriesLoadAttempted,
+            async move { catalog_clone.get_managed_directories().await },
+            Message::ManagedDirectoriesLoadAttempted,
         )
     } else {
-        crate::app::startup_log("LoadImportedDirectories skipped (no catalog)");
+        crate::app::startup_log("LoadManagedDirectories skipped (no catalog)");
         Task::none()
     }
 }
 
-pub fn handle_imported_directories_load_attempted(
+pub fn handle_managed_directories_load_attempted(
     app: &mut App,
     result: Result<Vec<PathBuf>, CatalogError>,
 ) -> Task<Message> {
     match result {
         Ok(paths) => {
             crate::app::startup_log(&format!(
-                "ImportedDirectoriesLoadAttempted: success ({} roots)",
+                "ManagedDirectoriesLoadAttempted: success ({} roots)",
                 paths.len()
             ));
-            app.imported_dirs = paths.clone();
+            app.managed_dirs = paths.clone();
 
             app.workspace_state.model.clear();
             app.workspace_state.model.root_folders = paths.clone();
@@ -86,9 +86,9 @@ pub fn handle_imported_directories_load_attempted(
             Task::batch(scan_tasks)
         }
         Err(e) => {
-            crate::app::startup_log("ImportedDirectoriesLoadAttempted: error");
+            crate::app::startup_log("ManagedDirectoriesLoadAttempted: error");
             println!(
-                "Error while loading imported directories from catalog: {0:?}",
+                "Error while loading managed directories from catalog: {0:?}",
                 e
             );
             Task::none()

@@ -73,7 +73,7 @@ impl std::fmt::Display for SortingOption {
 pub struct WorkspaceState {
     pub model: WorkspaceModel,
 
-    // Imported roots currently being scanned (initial load + reselection refreshes).
+    // Managed roots currently being scanned (initial load + reselection refreshes).
     pub roots_scanning: HashSet<PathBuf>,
 
     // Persistent preview payload cache (hash -> Preview).

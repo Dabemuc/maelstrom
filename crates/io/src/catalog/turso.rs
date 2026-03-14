@@ -30,7 +30,7 @@ impl TursoDB {
         let conn = db.connect()?;
 
         conn.execute(
-            r#"CREATE TABLE IF NOT EXISTS imported_paths (
+            r#"CREATE TABLE IF NOT EXISTS managed_paths (
                 path TEXT PRIMARY KEY
             )"#,
             (),
@@ -181,22 +181,22 @@ impl TursoDB {
         Ok(image_dos)
     }
 
-    /// Adds a directory path to the imported paths list.
-    pub async fn add_imported_path(&self, path: &str) -> turso::Result<()> {
+    /// Adds a directory path to the managed paths list.
+    pub async fn add_managed_path(&self, path: &str) -> turso::Result<()> {
         self.conn
             .execute(
-                "INSERT OR IGNORE INTO imported_paths (path) VALUES (?1)",
+                "INSERT OR IGNORE INTO managed_paths (path) VALUES (?1)",
                 [path],
             )
             .await?;
         Ok(())
     }
 
-    /// Retrieves all imported directory paths.
-    pub async fn get_imported_paths(&self) -> turso::Result<Vec<String>> {
+    /// Retrieves all managed directory paths.
+    pub async fn get_managed_paths(&self) -> turso::Result<Vec<String>> {
         let mut rows = self
             .conn
-            .query("SELECT path FROM imported_paths", ())
+            .query("SELECT path FROM managed_paths", ())
             .await?;
 
         let mut paths = Vec::new();
