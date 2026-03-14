@@ -11,7 +11,7 @@ use iced::widget::scrollable::Scrollbar;
 use iced::widget::{Space, button, column, container, mouse_area, responsive, row, svg, text};
 use iced::{Element, Length};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LeftSidebarMode {
@@ -316,22 +316,20 @@ fn build_folder_tree(
         col = col.push(selectable_row);
     }
 
-    if is_expanded {
-        if let Some(node) = node {
-            let mut children = node.children.clone();
-            children.sort();
+    if is_expanded && let Some(node) = node {
+        let mut children = node.children.clone();
+        children.sort();
 
-            for child_path in children {
-                col = col.push(build_folder_tree(
-                    &child_path,
-                    expanded,
-                    selected,
-                    folder_index,
-                    context_menu_root,
-                    context_menu_open,
-                    depth + 1,
-                ));
-            }
+        for child_path in children {
+            col = col.push(build_folder_tree(
+                &child_path,
+                expanded,
+                selected,
+                folder_index,
+                context_menu_root,
+                context_menu_open,
+                depth + 1,
+            ));
         }
     }
 
@@ -346,7 +344,7 @@ fn build_folder_tree(
     col.into()
 }
 
-fn build_root_context_menu(root: &PathBuf, is_scanning: bool) -> Element<'static, Message> {
+fn build_root_context_menu(root: &Path, is_scanning: bool) -> Element<'static, Message> {
     let refresh_button = {
         let button = button(
             text(if is_scanning {
@@ -362,7 +360,7 @@ fn build_root_context_menu(root: &PathBuf, is_scanning: bool) -> Element<'static
         if is_scanning {
             button
         } else {
-            button.on_press(Message::RefreshImportedRoot(root.clone()))
+            button.on_press(Message::RefreshImportedRoot(root.to_path_buf()))
         }
     };
 

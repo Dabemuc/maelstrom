@@ -102,7 +102,10 @@ impl WorkspaceState {
             "[Workspace State] Sorting previews by {}",
             self.selected_sorting_option
         );
+
         let time_before_sort = Instant::now();
+
+        #[allow(clippy::type_complexity)]
         let cmp: Box<dyn Fn(&String, &String) -> std::cmp::Ordering> = match self
             .selected_sorting_option
         {

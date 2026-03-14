@@ -30,10 +30,7 @@ impl SupportedFileTypes {
 
     /// Returns the enum variant for a given filename, if supported
     pub fn from_filename(filename: &str) -> Option<Self> {
-        Self::all()
-            .iter()
-            .cloned() // clone the enum variant
-            .find(|v| v._matches(filename))
+        Self::all().iter().find(|v| v._matches(filename)).cloned()
     }
 
     /// get all enums
@@ -83,12 +80,7 @@ impl SupportedFileTypes {
     ) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             Self::PNG => png::save_png(img, path, space),
-            Self::JPEG => jpeg::save_jpeg(
-                img,
-                path,
-                space,
-                options.unwrap_or(SaveOptions::default()).quality,
-            ),
+            Self::JPEG => jpeg::save_jpeg(img, path, space, options.unwrap_or_default().quality),
         }
     }
 }

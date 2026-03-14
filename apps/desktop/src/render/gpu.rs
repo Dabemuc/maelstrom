@@ -102,11 +102,11 @@ impl LinearImagePipeline {
         bounds: &Rectangle,
         viewport: &Viewport,
     ) {
-        if let Some(cache) = &self.cached_texture {
-            if Arc::ptr_eq(&cache.image, image) {
-                self.update_transform(queue, image, zoom, zoom_mode, pan, bounds, viewport);
-                return;
-            }
+        if let Some(cache) = &self.cached_texture
+            && Arc::ptr_eq(&cache.image, image)
+        {
+            self.update_transform(queue, image, zoom, zoom_mode, pan, bounds, viewport);
+            return;
         }
 
         let size = wgpu::Extent3d {
@@ -128,7 +128,7 @@ impl LinearImagePipeline {
 
         let bytes_per_row = image.stride * 4;
         let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as usize;
-        let padded_bytes_per_row = (bytes_per_row + align - 1) / align * align;
+        let padded_bytes_per_row = bytes_per_row.div_ceil(align) * align;
 
         if padded_bytes_per_row == bytes_per_row {
             queue.write_texture(

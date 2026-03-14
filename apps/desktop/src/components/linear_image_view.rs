@@ -112,28 +112,28 @@ impl Widget<Message, iced::Theme, Renderer> for LinearImageView {
             shell.publish(Message::DevelopZoomSet(fit_zoom));
         }
 
-        if let Event::Mouse(mouse::Event::WheelScrolled { delta }) = event {
-            if cursor.is_over(layout.bounds()) {
-                let lines = match delta {
-                    mouse::ScrollDelta::Lines { y, .. } => *y,
-                    mouse::ScrollDelta::Pixels { y, .. } => *y / 50.0,
-                };
+        if let Event::Mouse(mouse::Event::WheelScrolled { delta }) = event
+            && cursor.is_over(layout.bounds())
+        {
+            let lines = match delta {
+                mouse::ScrollDelta::Lines { y, .. } => *y,
+                mouse::ScrollDelta::Pixels { y, .. } => *y / 50.0,
+            };
 
-                if lines.abs() > 0.0 {
-                    let factor = 1.1_f32.powf(lines);
-                    if let Some(position) = cursor.position_over(layout.bounds()) {
-                        let (zoom, pan) = zoom_towards_point(
-                            &self.image,
-                            self.zoom,
-                            self.pan,
-                            layout.bounds(),
-                            position,
-                            factor,
-                        );
-                        shell.publish(Message::DevelopZoomSetPan { zoom, pan });
-                    } else {
-                        shell.publish(Message::DevelopZoomBy(factor));
-                    }
+            if lines.abs() > 0.0 {
+                let factor = 1.1_f32.powf(lines);
+                if let Some(position) = cursor.position_over(layout.bounds()) {
+                    let (zoom, pan) = zoom_towards_point(
+                        &self.image,
+                        self.zoom,
+                        self.pan,
+                        layout.bounds(),
+                        position,
+                        factor,
+                    );
+                    shell.publish(Message::DevelopZoomSetPan { zoom, pan });
+                } else {
+                    shell.publish(Message::DevelopZoomBy(factor));
                 }
             }
         }

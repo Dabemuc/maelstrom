@@ -88,7 +88,7 @@ pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Pre
         original_image: Image {
             path: image_path,
             hash: image_do.hash.clone(),
-            meta: meta,
+            meta,
             width,
             height,
             file_size,

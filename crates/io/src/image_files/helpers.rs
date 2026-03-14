@@ -58,14 +58,14 @@ pub fn scan_folder_images(root: impl AsRef<Path>) -> FolderScanResult {
                 continue;
             }
 
-            if let Some(ext) = entry_path.extension().and_then(|e| e.to_str()) {
-                if SupportedFileTypes::is_supported(ext.to_ascii_lowercase().as_str()) {
-                    result.all_image_paths.push(entry_path);
-                    *result
-                        .direct_image_counts
-                        .entry(path.to_path_buf())
-                        .or_insert(0) += 1;
-                }
+            if let Some(ext) = entry_path.extension().and_then(|e| e.to_str())
+                && SupportedFileTypes::is_supported(ext.to_ascii_lowercase().as_str())
+            {
+                result.all_image_paths.push(entry_path);
+                *result
+                    .direct_image_counts
+                    .entry(path.to_path_buf())
+                    .or_insert(0) += 1;
             }
         }
     }

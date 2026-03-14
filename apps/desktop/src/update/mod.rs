@@ -31,7 +31,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::ImportedDirectoriesLoadAttempted(result) => {
             import::handle_imported_directories_load_attempted(app, result)
         }
-        Message::ErrorMessage(msg) => workspace::handle_error_message(app, msg),
+        Message::Notification(msg) => workspace::handle_error_message(app, msg),
         Message::ToggleDirectory(path) => directories::handle_toggle_directory(app, path),
         Message::SelectDirectory(path) => directories::handle_select_directory(app, path),
         Message::OpenRootContextMenu(path) => directories::handle_open_root_context_menu(app, path),

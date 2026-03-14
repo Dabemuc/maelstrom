@@ -20,7 +20,7 @@ pub fn handle_import_directory(app: &mut App) -> Task<Message> {
             async move { catalog_clone.import_directory(path.clone()).await },
             |res| match res {
                 Ok(_) => Message::LoadImportedDirectories,
-                Err(_e) => Message::ErrorMessage("Failed to import directory".into()),
+                Err(_e) => Message::Notification("Failed to import directory".into()),
             },
         )
     } else {
@@ -66,8 +66,8 @@ pub fn handle_imported_directories_load_attempted(
 
             let scan_tasks: Vec<Task<Message>> = paths
                 .iter()
-                .cloned()
                 .map(|root| {
+                    let root = root.clone();
                     Task::perform(
                         async move {
                             let (tx, rx) = oneshot::channel();

@@ -197,23 +197,21 @@ fn build_pane_grid_layout(
     let mut left_split = None;
     let mut right_split = None;
 
-    if left_mode != LeftSidebarMode::Hidden {
-        if let Some((left_pane, split)) =
+    if left_mode != LeftSidebarMode::Hidden
+        && let Some((left_pane, split)) =
             state.split(Axis::Vertical, center_pane, PaneKind::LeftSidebar)
-        {
-            state.swap(center_pane, left_pane);
-            state.resize(split, clamp_ratio(left_ratio));
-            left_split = Some(split);
-        }
+    {
+        state.swap(center_pane, left_pane);
+        state.resize(split, clamp_ratio(left_ratio));
+        left_split = Some(split);
     }
 
-    if right_mode != RightSidebarMode::Hidden {
-        if let Some((_right_pane, split)) =
+    if right_mode != RightSidebarMode::Hidden
+        && let Some((_right_pane, split)) =
             state.split(Axis::Vertical, center_pane, PaneKind::RightSidebar)
-        {
-            state.resize(split, clamp_ratio(right_ratio));
-            right_split = Some(split);
-        }
+    {
+        state.resize(split, clamp_ratio(right_ratio));
+        right_split = Some(split);
     }
 
     PaneGridLayout {

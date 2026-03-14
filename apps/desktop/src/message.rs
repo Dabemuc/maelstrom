@@ -30,7 +30,7 @@ pub enum Message {
     ImportDirectory,
     LoadImportedDirectories,
     ImportedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
-    ErrorMessage(String),
+    Notification(String),
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
     OpenRootContextMenu(PathBuf),

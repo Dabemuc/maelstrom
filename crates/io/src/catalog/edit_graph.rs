@@ -64,6 +64,7 @@ impl NodeParameters for ExposureNode {
         }
     }
 
+    #[allow(clippy::single_match)]
     fn set_param(&mut self, name: &str, value: ParamValue) {
         match (name, value) {
             ("ev", ParamValue::Float(v)) => self.ev = v,
@@ -130,7 +131,7 @@ impl NodeParameters for WhiteBalanceNode {
 }
 
 /// Serializable, storable version of a Graph used to store a Graph that contains edits for an image
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct EditGraph {
     pub nodes: Vec<EditNode>,
 }
@@ -186,12 +187,6 @@ impl EditNode {
 
     pub fn is_default(&self) -> bool {
         *self == self.kind().default_node()
-    }
-}
-
-impl Default for EditGraph {
-    fn default() -> Self {
-        Self { nodes: Vec::new() }
     }
 }
 
