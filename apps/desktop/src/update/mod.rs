@@ -52,6 +52,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             preview::handle_preview_data_loaded_for_image(app, preview)
         }
         Message::PreviewGenerated(result) => preview::handle_preview_generated(app, result),
+        Message::ImportCompleted(payload) => import::handle_import_completed(app, payload),
         Message::SortingOptionSelected(option) => {
             workspace::handle_sorting_option_selected(app, option)
         }

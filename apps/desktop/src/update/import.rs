@@ -1,10 +1,15 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf};
 
 use iced::Task;
-use io::{catalog::ImageDO, image_files::helpers::scan_folder_images};
-use maelstrom_core::hash::hash_file;
+use io::{
+    image_files::helpers::scan_folder_images,
+    import::{create_import_plan, execute_import_plan, ImportDecision, ImportMethod},
+};
+use previews::preview_generation::generate_preview_for_image_with_graph;
 
 use crate::{app::App, message::Message};
+use crate::message::ImportCompletedPayload;
+use crate::update::workspace::handle_error_message;
 
 pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Task<Message> {
     let Some(catalog) = app.catalog.clone() else {
@@ -24,45 +29,53 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
                     root.to_str()
                 );
 
-                // Check if image is already imported. If not import
-                let mut imported_count = 0;
                 let already_imported_images = match catalog_clone
-                    .get_all_image_dos_for_path(root)
+                    .get_all_image_dos_for_path(root.clone())
                     .await
                 {
                     Ok(value) => value,
                     Err(err) => {
-                        return format!("Failed to load already imported images for path: {}", err);
+                        return ImportCompletedPayload {
+                            summary: format!(
+                                "Failed to load already imported images for path: {}",
+                                err
+                            ),
+                            imported_items: Vec::new(),
+                        };
                     }
                 };
-                let already_imported_images_hashmap: HashMap<_, _> = already_imported_images
-                    .clone()
+                let existing_hashes: HashSet<String> = already_imported_images
                     .into_iter()
-                    .map(|img| {
-                        let img_clone = img.clone();
-                        (img_clone.hash.clone(), img_clone)
-                    })
+                    .map(|img| img.hash)
                     .collect();
-                for image_path in scan_result.all_image_paths.clone() {
-                    if hash_in_dos(
-                        hash_file(&image_path).unwrap_or("".to_owned()),
-                        already_imported_images_hashmap.clone(),
-                    ) {
-                        println!("Image at {:?} already imported", image_path.to_str());
-                    } else {
-                        println!("Importing image from {:?}", image_path.to_str());
-                        imported_count += 1;
-                        // TODO: Actually do the importing
-                    }
-                }
+                let plan = create_import_plan(
+                    root.clone(),
+                    &scan_result,
+                    &existing_hashes,
+                    ImportMethod::DefaultByDate,
+                );
+                let imported_items = plan
+                    .items
+                    .iter()
+                    .filter(|item| item.decision == ImportDecision::Import)
+                    .cloned()
+                    .collect();
+                let report = execute_import_plan(plan, &catalog_clone).await;
 
-                format!(
-                    "Imported {} new images out of {} total.",
-                    imported_count,
-                    scan_result.all_image_paths.len()
-                )
+                let summary = format!(
+                    "Imported {} new images out of {} total. Skipped {}, errors {}.",
+                    report.imported_count,
+                    scan_result.all_image_paths.len(),
+                    report.skipped_count,
+                    report.errors.len()
+                );
+
+                ImportCompletedPayload {
+                    summary,
+                    imported_items,
+                }
             },
-            Message::Notification,
+            Message::ImportCompleted,
         )
     } else {
         println!("FileDialog canceled");
@@ -70,6 +83,39 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
     }
 }
 
-fn hash_in_dos(hash: String, dos: HashMap<String, ImageDO>) -> bool {
-    dos.contains_key(&hash)
+pub fn handle_import_completed(
+    app: &mut App,
+    payload: ImportCompletedPayload,
+) -> Task<Message> {
+    let summary = payload.summary.clone();
+    let mut tasks: Vec<Task<Message>> = Vec::new();
+
+    if let Some(catalog) = &app.catalog {
+        let catalog_clone = catalog.clone();
+
+        for item in payload.imported_items {
+            if item.hash.is_empty() || !item.dest_path.is_file() {
+                continue;
+            }
+
+            let dest_path = item.dest_path.clone();
+            let hash = item.hash.clone();
+            let catalog_for_task = catalog_clone.clone();
+
+            tasks.push(Task::perform(
+                async move {
+                    generate_preview_for_image_with_graph(
+                        dest_path,
+                        hash,
+                        io::catalog::EditGraph::default(),
+                        &catalog_for_task,
+                    )
+                    .await
+                },
+                Message::PreviewGenerated,
+            ));
+        }
+    }
+
+    handle_error_message(app, summary).chain(Task::batch(tasks))
 }
