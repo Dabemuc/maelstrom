@@ -22,6 +22,7 @@ use crate::state::{Preview, SelectionDiffData};
 pub struct ImportCompletedPayload {
     pub summary: String,
     pub imported_items: Vec<ImportItem>,
+    pub root: PathBuf,
 }
 
 #[derive(Debug, Clone)]

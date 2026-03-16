@@ -1,6 +1,7 @@
 use std::{collections::HashSet, path::PathBuf};
 
 use iced::Task;
+use iced::futures::channel::oneshot;
 use io::{
     image_files::helpers::scan_folder_images,
     import::{create_import_plan, execute_import_plan, ImportDecision, ImportMethod},
@@ -41,6 +42,7 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
                                 err
                             ),
                             imported_items: Vec::new(),
+                            root: root.clone(),
                         };
                     }
                 };
@@ -73,6 +75,7 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
                 ImportCompletedPayload {
                     summary,
                     imported_items,
+                    root: root.clone(),
                 }
             },
             Message::ImportCompleted,
@@ -88,6 +91,7 @@ pub fn handle_import_completed(
     payload: ImportCompletedPayload,
 ) -> Task<Message> {
     let summary = payload.summary.clone();
+    let root = payload.root.clone();
     let mut tasks: Vec<Task<Message>> = Vec::new();
 
     if let Some(catalog) = &app.catalog {
@@ -117,5 +121,21 @@ pub fn handle_import_completed(
         }
     }
 
-    handle_error_message(app, summary).chain(Task::batch(tasks))
+    app.workspace_state.roots_scanning.insert(root.clone());
+    let scan_task = Task::perform(
+        async move {
+            let (tx, rx) = oneshot::channel();
+            std::thread::spawn(move || {
+                let scan_result = scan_folder_images(root.clone());
+                let _ = tx.send((root, scan_result));
+            });
+
+            rx.await.expect("Thread panicked or channel closed")
+        },
+        Message::WorkspaceRootScanned,
+    );
+
+    handle_error_message(app, summary)
+        .chain(Task::batch(tasks))
+        .chain(scan_task)
 }
