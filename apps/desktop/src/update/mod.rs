@@ -2,6 +2,7 @@ pub mod catalog;
 pub mod develop;
 pub mod directories;
 pub mod helpers;
+pub mod import;
 pub mod managed;
 pub mod pane_grid;
 pub mod preview;
@@ -37,6 +38,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::OpenRootContextMenu(path) => directories::handle_open_root_context_menu(app, path),
         Message::CloseRootContextMenu => directories::handle_close_root_context_menu(app),
         Message::RefreshManagedRoot(root) => workspace::handle_refresh_managed_root(app, root),
+        Message::ImportFotos(root) => import::handle_import_fotos_into_managed_root(app, root),
         Message::WorkspaceRootScanned((root, scan_result)) => {
             workspace::handle_workspace_root_scanned(app, root, scan_result)
         }
@@ -50,6 +52,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             preview::handle_preview_data_loaded_for_image(app, preview)
         }
         Message::PreviewGenerated(result) => preview::handle_preview_generated(app, result),
+        Message::ImportCompleted(payload) => import::handle_import_completed(app, payload),
         Message::SortingOptionSelected(option) => {
             workspace::handle_sorting_option_selected(app, option)
         }

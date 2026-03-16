@@ -364,11 +364,19 @@ fn build_root_context_menu(root: &Path, is_scanning: bool) -> Element<'static, M
         }
     };
 
+    let import_button = {
+        let button = button(text("Import Fotos").size(13))
+            .padding([6, 10])
+            .width(Length::Shrink);
+        button.on_press(Message::ImportFotos(root.to_path_buf()))
+    };
+
     container(
         row![
             Space::new().width(Length::Fixed(24.0)),
             row![
                 refresh_button,
+                import_button,
                 button(text("Close").size(13))
                     .padding([6, 10])
                     .on_press(Message::CloseRootContextMenu)

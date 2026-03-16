@@ -6,6 +6,7 @@ use io::catalog::catalog_error::CatalogError;
 use io::catalog::edit_graph::{EditNodeKind, ParamValue};
 use io::catalog::ImageDO;
 use io::image_files::helpers::FolderScanResult;
+use io::import::ImportItem;
 use maelstrom_image::linear_image::LinearImage;
 use previews::preview_generation::PreviewGenerationError;
 
@@ -16,6 +17,13 @@ use crate::state::state_error::StateError;
 use crate::state::workspace::SortingOption;
 use crate::state::ViewMode;
 use crate::state::{Preview, SelectionDiffData};
+
+#[derive(Debug, Clone)]
+pub struct ImportCompletedPayload {
+    pub summary: String,
+    pub imported_items: Vec<ImportItem>,
+    pub root: PathBuf,
+}
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -36,11 +44,13 @@ pub enum Message {
     OpenRootContextMenu(PathBuf),
     CloseRootContextMenu,
     RefreshManagedRoot(PathBuf),
+    ImportFotos(PathBuf),
     WorkspaceRootScanned((PathBuf, FolderScanResult)),
     SelectionCatalogLoaded(Result<(u64, PathBuf, Vec<ImageDO>), CatalogError>),
     SelectionDiffComputed(SelectionDiffData),
     PreviewDataLoadedForImage(Preview),
     PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
+    ImportCompleted(ImportCompletedPayload),
     SortingOptionSelected(SortingOption),
     SortingDirectionToggled,
     PreviewDoubleClicked(String),

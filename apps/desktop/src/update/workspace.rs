@@ -13,7 +13,8 @@ use crate::state::develop::DevelopState;
 use crate::state::workspace::SortingOption;
 use crate::update::helpers::to_workspace_scan_result;
 
-pub fn handle_error_message(_app: &mut App, _msg: String) -> Task<Message> {
+pub fn handle_error_message(_app: &mut App, msg: String) -> Task<Message> {
+    println!("[Notification] {}", msg);
     Task::none()
 }
 
@@ -24,6 +25,7 @@ pub fn handle_refresh_managed_root(app: &mut App, root: PathBuf) -> Task<Message
 
     Task::perform(
         async move {
+            // TODO: Why are we creating a thread here???
             let (tx, rx) = oneshot::channel();
             std::thread::spawn(move || {
                 let scan_result = scan_folder_images(root.clone());
