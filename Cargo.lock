@@ -1111,6 +1111,7 @@ dependencies = [
  "io",
  "previews",
  "rfd",
+ "services",
  "thiserror 2.0.18",
  "time",
  "tokio",
@@ -4153,6 +4154,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "services"
+version = "0.1.0"
+dependencies = [
+ "core",
+ "image 0.25.9",
+ "io",
+ "previews",
+ "thiserror 2.0.18",
+ "time",
 ]
 
 [[package]]

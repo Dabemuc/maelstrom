@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use iced::Task;
+use services::sync_selection;
 
 use crate::app::App;
 use crate::message::Message;
@@ -46,12 +47,8 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
     };
 
     Task::perform(
-        async move {
-            let selected_path = path.clone();
-            let image_dos = catalog.get_all_image_dos_for_path(&selected_path).await?;
-            Ok((request_id, selected_path, image_dos))
-        },
-        Message::SelectionCatalogLoaded,
+        async move { sync_selection(&catalog, request_id, path).await },
+        Message::SelectionSynced,
     )
 }
 

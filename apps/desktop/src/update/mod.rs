@@ -42,15 +42,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::WorkspaceRootScanned((root, scan_result)) => {
             workspace::handle_workspace_root_scanned(app, root, scan_result)
         }
-        Message::SelectionCatalogLoaded(result) => {
-            selection::handle_selection_catalog_loaded(app, result)
-        }
-        Message::SelectionDiffComputed(diff_data) => {
-            selection::handle_selection_diff_computed(app, diff_data)
-        }
-        Message::PreviewDataLoadedForImage(preview) => {
-            preview::handle_preview_data_loaded_for_image(app, preview)
-        }
+        Message::SelectionSynced(result) => selection::handle_selection_synced(app, result),
         Message::PreviewGenerated(result) => preview::handle_preview_generated(app, result),
         Message::ImportCompleted(payload) => import::handle_import_completed(app, payload),
         Message::SortingOptionSelected(option) => {

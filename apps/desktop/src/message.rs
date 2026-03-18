@@ -16,7 +16,8 @@ use crate::state::develop::DevelopState;
 use crate::state::state_error::StateError;
 use crate::state::workspace::SortingOption;
 use crate::state::ViewMode;
-use crate::state::{Preview, SelectionDiffData};
+use services::error::ServiceError;
+use services::types::SelectionSyncResult;
 
 #[derive(Debug, Clone)]
 pub struct ImportCompletedPayload {
@@ -46,9 +47,7 @@ pub enum Message {
     RefreshManagedRoot(PathBuf),
     ImportFotos(PathBuf),
     WorkspaceRootScanned((PathBuf, FolderScanResult)),
-    SelectionCatalogLoaded(Result<(u64, PathBuf, Vec<ImageDO>), CatalogError>),
-    SelectionDiffComputed(SelectionDiffData),
-    PreviewDataLoadedForImage(Preview),
+    SelectionSynced(Result<SelectionSyncResult, ServiceError>),
     PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
     ImportCompleted(ImportCompletedPayload),
     SortingOptionSelected(SortingOption),

@@ -1,0 +1,12 @@
+[package]
+name = "services"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+io = { path = "../io", package = "io" }
+maelstrom_core = { path = "../core", package = "core" }
+previews = { path = "../previews" }
+image = "0.25.9"
+time = "0.3.36"
+thiserror = "2.0.18"

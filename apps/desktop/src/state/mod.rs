@@ -5,5 +5,5 @@ pub mod types;
 pub mod workspace;
 
 pub use directories::DirectoriesState;
-pub use types::{SelectionDiffData, ViewMode};
+pub use types::ViewMode;
 pub use workspace::{Preview, PreviewState, WorkspaceState};
