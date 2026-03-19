@@ -13,13 +13,12 @@ use crate::update::workspace::handle_error_message;
 use crate::{app::App, message::Message};
 
 pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Task<Message> {
-    let Some(catalog) = app.catalog.clone() else {
-        println!("Cannot add managed directory: no catalog loaded");
+    let Some(services) = app.services.clone() else {
+        println!("Cannot add managed directory: no services loaded");
         return Task::none();
     };
 
     if let Some(path) = rfd::FileDialog::new().pick_folder() {
-        let catalog_clone = catalog.clone();
         Task::perform(
             async move {
                 // Read all images to import
@@ -30,20 +29,23 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
                     root.to_str()
                 );
 
-                let already_imported_images =
-                    match catalog_clone.get_all_image_dos_for_path(root.clone()).await {
-                        Ok(value) => value,
-                        Err(err) => {
-                            return ImportCompletedPayload {
-                                summary: format!(
-                                    "Failed to load already imported images for path: {}",
-                                    err
-                                ),
-                                imported_items: Vec::new(),
-                                root: root.clone(),
-                            };
-                        }
-                    };
+                let already_imported_images = match services
+                    .catalog
+                    .get_all_image_dos_for_path(root.clone())
+                    .await
+                {
+                    Ok(value) => value,
+                    Err(err) => {
+                        return ImportCompletedPayload {
+                            summary: format!(
+                                "Failed to load already imported images for path: {}",
+                                err
+                            ),
+                            imported_items: Vec::new(),
+                            root: root.clone(),
+                        };
+                    }
+                };
                 let existing_hashes: HashSet<String> = already_imported_images
                     .into_iter()
                     .map(|img| img.hash)
@@ -60,7 +62,7 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
                     .filter(|item| item.decision == ImportDecision::Import)
                     .cloned()
                     .collect();
-                let report = execute_import_plan(plan, &catalog_clone).await;
+                let report = execute_import_plan(plan, services.catalog.get_catalog_ref()).await;
 
                 let summary = format!(
                     "Imported {} new images out of {} total. Skipped {}, errors {}.",
@@ -89,9 +91,7 @@ pub fn handle_import_completed(app: &mut App, payload: ImportCompletedPayload) -
     let root = payload.root.clone();
     let mut tasks: Vec<Task<Message>> = Vec::new();
 
-    if let Some(catalog) = &app.catalog {
-        let catalog_clone = catalog.clone();
-
+    if let Some(services) = &app.services {
         for item in payload.imported_items {
             if item.hash.is_empty() || !item.dest_path.is_file() {
                 continue;
@@ -99,7 +99,7 @@ pub fn handle_import_completed(app: &mut App, payload: ImportCompletedPayload) -
 
             let dest_path = item.dest_path.clone();
             let hash = item.hash.clone();
-            let catalog_for_task = catalog_clone.clone();
+            let catalog_for_task = services.catalog.get_catalog_ref().clone();
 
             tasks.push(Task::perform(
                 async move {

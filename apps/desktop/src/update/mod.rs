@@ -1,4 +1,3 @@
-pub mod catalog;
 pub mod develop;
 pub mod directories;
 pub mod helpers;
@@ -7,6 +6,7 @@ pub mod managed;
 pub mod pane_grid;
 pub mod preview;
 pub mod selection;
+pub mod services;
 pub mod sidebar;
 pub mod workspace;
 
@@ -20,12 +20,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::LeftSidebarClicked(mode) => sidebar::handle_left_sidebar_clicked(app, mode),
         Message::RightSidebarClicked(mode) => sidebar::handle_right_sidebar_clicked(app, mode),
         Message::PaneResized(event) => pane_grid::handle_pane_resized(app, event),
-        Message::CreateCatalog => catalog::handle_create_catalog(app),
-        Message::SelectCatalog => catalog::handle_select_catalog(app),
-        Message::CatalogLoadAttempted(result) => {
-            catalog::handle_catalog_load_attempted(app, result)
-        }
-        Message::CatalogLoaded => catalog::handle_catalog_loaded(app),
+        Message::ServicesInitialized(result) => services::handle_services_initialized(app, result),
         Message::DirectoriesCollapseAll => directories::handle_directories_collapse_all(app),
         Message::AddManagedDirectory => managed::handle_add_managed_directory(app),
         Message::LoadManagedDirectories => managed::handle_load_managed_directories(app),

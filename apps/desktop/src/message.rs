@@ -2,13 +2,12 @@ use std::path::PathBuf;
 
 use iced::widget::pane_grid;
 use io::catalog::ImageDO;
-use io::catalog::catalog::Catalog;
-use io::catalog::catalog_error::CatalogError;
 use io::catalog::edit_graph::{EditNodeKind, ParamValue};
 use io::image_files::helpers::FolderScanResult;
 use io::import::ImportItem;
 use maelstrom_image::linear_image::LinearImage;
 use previews::preview_generation::PreviewGenerationError;
+use services::interface::Services;
 
 use crate::components::sidebar_left::LeftSidebarMode;
 use crate::components::sidebar_right::RightSidebarMode;
@@ -31,14 +30,11 @@ pub enum Message {
     LeftSidebarClicked(LeftSidebarMode),
     RightSidebarClicked(RightSidebarMode),
     PaneResized(pane_grid::ResizeEvent),
-    CreateCatalog,
-    SelectCatalog,
-    CatalogLoadAttempted(Result<Catalog, CatalogError>),
-    CatalogLoaded,
+    ServicesInitialized(Result<Services, ServiceError>),
     DirectoriesCollapseAll,
     AddManagedDirectory,
     LoadManagedDirectories,
-    ManagedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
+    ManagedDirectoriesLoadAttempted(Result<Vec<PathBuf>, ServiceError>),
     Notification(String),
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
@@ -78,6 +74,6 @@ pub enum Message {
         value: String,
     },
     DevelopSaveRequested,
-    DevelopSaveCompleted(Result<(), CatalogError>),
+    DevelopSaveCompleted(Result<(), ServiceError>),
     DevelopExportRequested,
 }

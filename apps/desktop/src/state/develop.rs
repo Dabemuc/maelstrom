@@ -1,5 +1,5 @@
 use io::{
-    catalog::{EditGraph, catalog::Catalog, edit_graph::EditNodeKind},
+    catalog::{EditGraph, edit_graph::EditNodeKind},
     image_files::supported_image_file_types::SupportedFileTypes,
 };
 use maelstrom_image::linear_image::LinearImage;
@@ -34,9 +34,10 @@ pub enum ZoomMode {
 }
 
 impl DevelopState {
-    pub async fn from_preview(catalog: Catalog, preview: &Preview) -> Result<Self, StateError> {
-        let edit_graph = catalog.get_edit_graph(&preview.original_image.hash).await?;
-
+    pub async fn from_preview(
+        edit_graph: EditGraph,
+        preview: &Preview,
+    ) -> Result<Self, StateError> {
         let path = preview
             .original_image
             .path

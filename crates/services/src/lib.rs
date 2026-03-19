@@ -1,8 +1,11 @@
-mod cache;
-mod preview_data;
+mod catalog;
 
 pub mod error;
-pub mod selection;
-pub mod types;
+pub mod interface;
 
-pub use selection::sync_selection;
+pub use catalog::CatalogService;
+pub use catalog::types;
+
+/*
+* This crate provides access to all the use cases, types and errors of the backend
+*/

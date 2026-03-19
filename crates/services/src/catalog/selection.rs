@@ -4,9 +4,9 @@ use io::catalog::catalog::Catalog;
 use io::image_files::helpers::scan_folder_images;
 use previews::preview_generation;
 
-use crate::cache::compare_cache_to_fs;
+use crate::catalog::cache::compare_cache_to_fs;
+use crate::catalog::preview_data::preview_data_from_image_do;
 use crate::error::ServiceError;
-use crate::preview_data::preview_data_from_image_do;
 use crate::types::SelectionSyncResult;
 
 pub async fn sync_selection(

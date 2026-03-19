@@ -4,6 +4,7 @@ use graph::node::Backend;
 use iced::Task;
 use io::catalog::edit_graph::{EditNodeKind, NodeParameters, ParamType, ParamValue};
 use maelstrom_image::linear_image::LinearImage;
+use services::error::ServiceError;
 
 use crate::{
     app::App,
@@ -102,7 +103,7 @@ pub fn handle_develop_pan_by(app: &mut App, delta: [f32; 2]) -> Task<Message> {
 }
 
 pub fn handle_develop_save_requested(app: &mut App) -> Task<Message> {
-    let Some(catalog) = app.catalog.clone() else {
+    let Some(services) = app.services.clone() else {
         return Task::none();
     };
     let Some(state) = app.develop_state.as_ref() else {
@@ -124,14 +125,15 @@ pub fn handle_develop_save_requested(app: &mut App) -> Task<Message> {
     let graph_for_save = state.edit_graph.clone();
     let graph_for_preview = state.edit_graph.clone();
     let preview_path = preview.original_image.path.clone();
-    let catalog_for_save = catalog.clone();
-    let catalog_for_preview = catalog.clone();
+    let services_for_save = services.clone();
+    let services_for_preview = services.clone();
     let selected_hash_for_save = selected_hash.clone();
     let selected_hash_for_preview = selected_hash.clone();
 
     let save_task = Task::perform(
         async move {
-            catalog_for_save
+            services_for_save
+                .catalog
                 .set_edit_graph(&selected_hash_for_save, &graph_for_save)
                 .await
         },
@@ -144,7 +146,7 @@ pub fn handle_develop_save_requested(app: &mut App) -> Task<Message> {
                 preview_path,
                 selected_hash_for_preview,
                 graph_for_preview,
-                &catalog_for_preview,
+                services_for_preview.catalog.get_catalog_ref(),
             )
             .await
         },
@@ -156,7 +158,7 @@ pub fn handle_develop_save_requested(app: &mut App) -> Task<Message> {
 
 pub fn handle_develop_save_completed(
     _app: &mut App,
-    result: Result<(), io::catalog::catalog_error::CatalogError>,
+    result: Result<(), ServiceError>,
 ) -> Task<Message> {
     if let Err(err) = result {
         println!("Failed to save edit graph: {:#?}", err);

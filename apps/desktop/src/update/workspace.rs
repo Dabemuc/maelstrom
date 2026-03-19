@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use iced::Task;
 use iced::futures::channel::oneshot;
+use io::catalog::EditGraph;
 use io::image_files::helpers::{FolderScanResult, scan_folder_images};
 
 use crate::app::App;
@@ -95,7 +96,7 @@ pub fn handle_view_mode_selected(app: &mut App, mode: ViewMode) -> Task<Message>
     let mut tasks: Vec<Task<Message>> = Vec::new();
 
     if mode == ViewMode::Develop {
-        if let Some(catalog) = app.catalog.clone() {
+        if let Some(services) = app.services.clone() {
             if let Some(selected_hash) = app.workspace_state.selected_preview_hash.as_ref() {
                 if let Some(preview) = app
                     .workspace_state
@@ -106,7 +107,25 @@ pub fn handle_view_mode_selected(app: &mut App, mode: ViewMode) -> Task<Message>
                     let preview = preview.clone();
                     // Load develop state
                     tasks.push(Task::perform(
-                        async move { DevelopState::from_preview(catalog, &preview).await },
+                        async move {
+                            // get Edit graph
+                            let edit_graph = match services
+                                .catalog
+                                .get_edit_graph(&preview.original_image.hash)
+                                .await
+                            {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    println!(
+                                        "Error while getting edit graph for image with hash {:?}: {:#?}",
+                                        preview.original_image.hash, e
+                                    );
+                                    EditGraph::default()
+                                }
+                            };
+
+                            DevelopState::from_preview(edit_graph, &preview).await
+                        },
                         Message::DevelopStateLoaded,
                     ));
                 } else {

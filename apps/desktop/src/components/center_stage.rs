@@ -7,13 +7,11 @@ use crate::message::Message;
 use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{Preview, PreviewState, ViewMode};
 use iced::Alignment::Center;
-use iced::alignment::Horizontal;
 use iced::widget::tooltip::Position;
 use iced::widget::{
-    Space, button, column, container, image, mouse_area, pick_list, responsive, row, scrollable,
-    svg, text,
+    Space, column, container, image, mouse_area, pick_list, responsive, row, scrollable, svg, text,
 };
-use iced::{Alignment, Element, Length};
+use iced::{Element, Length};
 
 pub fn center_stage(state: &App) -> Element<'_, Message> {
     let content = match state.view_mode {
@@ -37,34 +35,7 @@ pub fn center_stage(state: &App) -> Element<'_, Message> {
 }
 
 fn no_catalog_view() -> Element<'static, Message> {
-    column![
-        Space::new().width(Length::Fill).height(Length::Fill),
-        row![
-            Space::new().width(Length::FillPortion(1)),
-            text("Get started by Creating or Selecting an existing Catalog")
-                .size(25)
-                .width(Length::FillPortion(2))
-                .align_x(Horizontal::Center),
-            Space::new().width(Length::FillPortion(1))
-        ],
-        row![
-            button(text("Create Catalog").size(16))
-                .on_press(Message::CreateCatalog)
-                .padding([12, 24])
-                .style(iced::widget::button::primary),
-            button(text("Select Catalog").size(16))
-                .on_press(Message::SelectCatalog)
-                .padding([12, 24])
-                .style(iced::widget::button::primary),
-        ]
-        .spacing(20),
-        Space::new().width(Length::Fill).height(Length::Fill),
-    ]
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .align_x(Alignment::Center)
-    .spacing(40)
-    .into()
+    text("no catalog :(").into()
 }
 
 const CELL_SIZE: f32 = 150.0; // box width/height

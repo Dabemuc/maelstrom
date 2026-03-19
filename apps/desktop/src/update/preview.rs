@@ -15,10 +15,13 @@ pub fn handle_preview_generated(
 ) -> Task<Message> {
     match result {
         Ok(image_do) => {
-            if let Some(catalog) = &app.catalog {
-                let mut preview = build_preview_from_image_do(catalog, &image_do);
+            if let Some(services) = &app.services {
+                let mut preview = build_preview_from_image_do(
+                    services.catalog.preview_cache_dir().to_path_buf(),
+                    &image_do,
+                );
 
-                let preview_path = catalog.preview_cache_dir().join(format!(
+                let preview_path = services.catalog.preview_cache_dir().join(format!(
                     "{}.{}",
                     image_do.hash,
                     previews::preview_generation::PREVIEW_FILE_TYPE.get_file_extension()

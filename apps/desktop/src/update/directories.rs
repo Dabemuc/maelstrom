@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use iced::Task;
-use services::sync_selection;
 
 use crate::app::App;
 use crate::message::Message;
@@ -42,12 +41,14 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
     app.active_selection_request_id = Some(request_id);
     crate::update::helpers::refresh_selected_previews_from_cache(app);
 
-    let Some(catalog) = app.catalog.clone() else {
+    let Some(services) = app.services.as_ref() else {
         return Task::none();
     };
 
+    let catalog = services.catalog.clone();
+
     Task::perform(
-        async move { sync_selection(&catalog, request_id, path).await },
+        async move { catalog.sync_selection(request_id, path).await },
         Message::SelectionSynced,
     )
 }
