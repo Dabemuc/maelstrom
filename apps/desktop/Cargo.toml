@@ -14,7 +14,7 @@ iced = { version = "0.14.0", features = ["svg", "image", "advanced"] }
 iced_wgpu = "0.14.0"
 image = "0.25.9"
 rfd = "0.17.2"
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.50.0", features = ["full"] }
 dirs = "6.0.0"
 time = "0.3.36"
 thiserror = "2.0.18"
