@@ -68,10 +68,7 @@ pub fn handle_selection_synced(
         }
 
         if let Some(preview) = app.workspace_state.previews.get_mut(&image_do.hash)
-            && preview
-                .original_image
-                .path
-                .starts_with(&data.selected_path)
+            && preview.original_image.path.starts_with(&data.selected_path)
         {
             preview.preview_state = PreviewState::OriginalMissing;
         }

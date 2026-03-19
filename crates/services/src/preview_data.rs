@@ -3,11 +3,11 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 use image::image_dimensions;
-use io::catalog::{catalog::Catalog, ImageDO};
+use io::catalog::{ImageDO, catalog::Catalog};
 use io::metadata::metadata::Metadata;
 use previews::preview_generation::PREVIEW_FILE_TYPE;
-use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
 
 use crate::types::{ImageData, PreviewData, PreviewStatus};
 

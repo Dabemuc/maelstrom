@@ -4,13 +4,13 @@ use iced::Task;
 use iced::futures::channel::oneshot;
 use io::{
     image_files::helpers::scan_folder_images,
-    import::{create_import_plan, execute_import_plan, ImportDecision, ImportMethod},
+    import::{ImportDecision, ImportMethod, create_import_plan, execute_import_plan},
 };
 use previews::preview_generation::generate_preview_for_image_with_graph;
 
-use crate::{app::App, message::Message};
 use crate::message::ImportCompletedPayload;
 use crate::update::workspace::handle_error_message;
+use crate::{app::App, message::Message};
 
 pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Task<Message> {
     let Some(catalog) = app.catalog.clone() else {
@@ -30,22 +30,20 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
                     root.to_str()
                 );
 
-                let already_imported_images = match catalog_clone
-                    .get_all_image_dos_for_path(root.clone())
-                    .await
-                {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return ImportCompletedPayload {
-                            summary: format!(
-                                "Failed to load already imported images for path: {}",
-                                err
-                            ),
-                            imported_items: Vec::new(),
-                            root: root.clone(),
-                        };
-                    }
-                };
+                let already_imported_images =
+                    match catalog_clone.get_all_image_dos_for_path(root.clone()).await {
+                        Ok(value) => value,
+                        Err(err) => {
+                            return ImportCompletedPayload {
+                                summary: format!(
+                                    "Failed to load already imported images for path: {}",
+                                    err
+                                ),
+                                imported_items: Vec::new(),
+                                root: root.clone(),
+                            };
+                        }
+                    };
                 let existing_hashes: HashSet<String> = already_imported_images
                     .into_iter()
                     .map(|img| img.hash)
@@ -86,10 +84,7 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
     }
 }
 
-pub fn handle_import_completed(
-    app: &mut App,
-    payload: ImportCompletedPayload,
-) -> Task<Message> {
+pub fn handle_import_completed(app: &mut App, payload: ImportCompletedPayload) -> Task<Message> {
     let summary = payload.summary.clone();
     let root = payload.root.clone();
     let mut tasks: Vec<Task<Message>> = Vec::new();

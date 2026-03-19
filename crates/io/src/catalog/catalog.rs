@@ -160,10 +160,7 @@ impl Catalog {
     }
 
     /// Adds a managed directory path into the catalog.
-    pub async fn add_managed_directory(
-        &self,
-        path: impl AsRef<Path>,
-    ) -> Result<(), CatalogError> {
+    pub async fn add_managed_directory(&self, path: impl AsRef<Path>) -> Result<(), CatalogError> {
         let path_ref = path.as_ref();
 
         let path_str = path_ref
