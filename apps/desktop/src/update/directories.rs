@@ -48,7 +48,7 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
     let catalog = services.catalog.clone();
 
     Task::perform(
-        async move { catalog.sync_selection(request_id, path).await },
+        async move { catalog.sync_catalog_with_fs_for_dir(request_id, path).await },
         Message::SelectionSynced,
     )
 }

@@ -1,6 +1,6 @@
 use iced::Task;
 use services::error::ServiceError;
-use services::types::{PreviewStatus, SelectionSyncResult};
+use services::types::{CatalogSyncResult, PreviewStatus};
 
 use crate::app::App;
 use crate::message::Message;
@@ -11,7 +11,7 @@ use crate::update::preview;
 
 pub fn handle_selection_synced(
     app: &mut App,
-    result: Result<SelectionSyncResult, ServiceError>,
+    result: Result<CatalogSyncResult, ServiceError>,
 ) -> Task<Message> {
     let data = match result {
         Ok(data) => data,

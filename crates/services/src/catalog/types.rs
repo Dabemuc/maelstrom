@@ -29,7 +29,7 @@ pub struct PreviewData {
 }
 
 #[derive(Debug, Clone)]
-pub struct SelectionSyncResult {
+pub struct CatalogSyncResult {
     pub request_id: u64,
     pub selected_path: PathBuf,
     pub image_dos: Vec<ImageDO>,

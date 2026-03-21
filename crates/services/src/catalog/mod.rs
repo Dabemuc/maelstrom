@@ -1,6 +1,5 @@
-mod cache;
+mod catalog_sync;
 mod preview_data;
-mod selection;
 pub mod types;
 
 mod catalog_service;

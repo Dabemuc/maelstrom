@@ -6,7 +6,10 @@ use io::catalog::{
     catalog_error::CatalogError,
 };
 
-use crate::{catalog::selection::sync_selection, error::ServiceError, types::SelectionSyncResult};
+use crate::{
+    catalog::catalog_sync::sync_catalog_with_fs_for_dir, error::ServiceError,
+    types::CatalogSyncResult,
+};
 
 #[derive(Debug, Clone)]
 pub struct CatalogService {
@@ -35,7 +38,7 @@ impl CatalogService {
         Ok(Self { catalog })
     }
 
-    // TODO: Remove
+    // TODO: Should eventually be removed
     pub fn get_catalog_ref(&self) -> &Catalog {
         &self.catalog
     }
@@ -67,27 +70,33 @@ impl CatalogService {
         Ok(self.catalog.set_edit_graph(content_hash, graph).await?)
     }
 
+    // TODO: Should eventually be removed
     pub fn root(&self) -> &Path {
         self.catalog.root()
     }
 
+    // TODO: Should eventually be removed
     pub fn cache_dir(&self) -> &Path {
         self.catalog.cache_dir()
     }
 
+    // TODO: Should eventually be removed
     pub fn preview_cache_dir(&self) -> &Path {
         self.catalog.preview_cache_dir()
     }
 
+    // TODO: Should eventually be removed
     pub fn develop_cache_dir(&self) -> &Path {
         self.catalog.develop_cache_dir()
     }
 
-    pub async fn sync_selection(
+    // TODO: Should be renamed (whole process, aka all involved files/methods)
+    /// Compares catalog to fs for path and adds new images to catalog
+    pub async fn sync_catalog_with_fs_for_dir(
         &self,
         request_id: u64,
         selected_path: PathBuf,
-    ) -> Result<SelectionSyncResult, ServiceError> {
-        sync_selection(&self.catalog, request_id, selected_path).await
+    ) -> Result<CatalogSyncResult, ServiceError> {
+        sync_catalog_with_fs_for_dir(&self.catalog, request_id, selected_path).await
     }
 }
