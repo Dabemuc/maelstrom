@@ -39,7 +39,7 @@ pub async fn sync_catalog_with_fs_for_dir(
     })
 }
 
-fn compare_catalog_to_fs(
+pub(super) fn compare_catalog_to_fs(
     paths_of_images_in_folder: Vec<PathBuf>,
     image_dos_in_catalog: Vec<ImageDO>,
 ) -> (Vec<PathBuf>, Vec<ImageDO>) {

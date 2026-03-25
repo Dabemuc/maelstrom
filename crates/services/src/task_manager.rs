@@ -11,6 +11,7 @@ use tokio::task::JoinHandle;
 use crate::catalog::CatalogService;
 use crate::event_bus::EventBus;
 use crate::events::{ServiceEvent, TaskId};
+use crate::types::CatalogSyncResult;
 use crate::ImportStrategy;
 
 #[derive(Debug)]
@@ -98,9 +99,14 @@ impl TaskManager {
     }
 
     /// Syncs the catalog with the filesystem for a directory and generates previews for any
-    /// new images in parallel. Emits [`ServiceEvent::SyncCompleted`] immediately after the
-    /// catalog diff (so the UI can populate existing previews), then emits
-    /// [`ServiceEvent::PreviewGenerated`] as each new preview finishes.
+    /// new images in parallel.
+    ///
+    /// Emits two [`ServiceEvent::SyncCompleted`] events:
+    /// 1. Immediately after the DB query — carries existing image/preview data so the UI can
+    ///    populate right away without waiting for the filesystem scan.
+    /// 2. After the FS scan — carries `catalog_image_dos_to_delete` so stale entries are marked.
+    ///
+    /// Then emits [`ServiceEvent::PreviewGenerated`] as each new preview finishes.
     pub fn spawn_sync_with_previews(
         self: &Arc<Self>,
         catalog_service: Arc<CatalogService>,
@@ -111,33 +117,69 @@ impl TaskManager {
         let bus = self.bus.clone();
 
         let handle = self.rt.spawn(async move {
-            // 1. Sync catalog with filesystem (fast — no preview gen inside anymore)
-            let result = catalog_service
-                .sync_catalog_with_fs_for_dir(request_id, path)
-                .await;
-
-            let result = match result {
-                Ok(r) => r,
+            // Phase 1: DB query only — O(1) regardless of directory size, no disk reads per image
+            let image_dos = match catalog_service
+                .get_all_image_dos_for_path(&path)
+                .await
+            {
+                Ok(dos) => dos,
                 Err(e) => {
-                    eprintln!("[TaskManager] Sync failed: {}", e);
+                    eprintln!("[Sync] DB query failed: {}", e);
                     return;
                 }
             };
 
-            // 2. Emit sync result immediately so the UI can show existing previews
-            let images_to_generate = result.images_to_add_to_catalog.clone();
-            bus.emit(ServiceEvent::SyncCompleted { task_id, result });
+            // Emit immediately with empty preview_data: the UI builds quick previews from
+            // image_dos without reading EXIF or image dimensions (see handle_selection_synced).
+            bus.emit(ServiceEvent::SyncCompleted {
+                task_id,
+                result: CatalogSyncResult {
+                    request_id,
+                    selected_path: path.clone(),
+                    image_dos: image_dos.clone(),
+                    preview_data: vec![],
+                    images_to_add_to_catalog: vec![],
+                    catalog_image_dos_to_delete: vec![],
+                    generated: vec![],
+                },
+            });
 
-            // 3. Fan out: one tokio::spawn per new image for true parallelism
-            let preview_handles: Vec<JoinHandle<()>> = images_to_generate
+            // Phase 2: FS scan + hash comparison — blocking I/O, must not run on an async
+            // worker thread or it starves the executor and delays subscription message delivery.
+            let catalog_for_scan = catalog_service.clone();
+            let path_for_scan = path.clone();
+            let (images_to_add, images_to_delete) = tokio::task::spawn_blocking(move || {
+                catalog_for_scan.diff_dir_with_catalog(path_for_scan, image_dos)
+            })
+            .await
+            .expect("diff_dir_with_catalog panicked");
+
+            // Emit stale entries so the UI can mark them as missing
+            if !images_to_delete.is_empty() {
+                bus.emit(ServiceEvent::SyncCompleted {
+                    task_id,
+                    result: CatalogSyncResult {
+                        request_id,
+                        selected_path: path.clone(),
+                        image_dos: vec![],
+                        preview_data: vec![],
+                        images_to_add_to_catalog: vec![],
+                        catalog_image_dos_to_delete: images_to_delete,
+                        generated: vec![],
+                    },
+                });
+            }
+
+            // Phase 3: Fan out preview generation for new images — one task per image
+            let preview_handles: Vec<JoinHandle<()>> = images_to_add
                 .into_iter()
-                .map(|path| {
+                .map(|img_path| {
                     let bus = bus.clone();
                     let catalog_clone = catalog_service.get_catalog_ref().clone();
 
                     tokio::spawn(async move {
                         let result =
-                            generate_preview_for_image(path, &catalog_clone, false).await;
+                            generate_preview_for_image(img_path, &catalog_clone, false).await;
                         bus.emit(ServiceEvent::PreviewGenerated { task_id, result });
                     })
                 })

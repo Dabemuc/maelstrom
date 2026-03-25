@@ -16,8 +16,12 @@ use io::{
 use crate::{ImportStrategy, types::ImportCompletedPayload};
 
 use crate::{
-    catalog::catalog_sync::sync_catalog_with_fs_for_dir, error::ServiceError,
-    types::CatalogSyncResult,
+    catalog::{
+        catalog_sync::{compare_catalog_to_fs, sync_catalog_with_fs_for_dir},
+        preview_data::preview_data_from_image_do,
+    },
+    error::ServiceError,
+    types::{CatalogSyncResult, PreviewData},
 };
 
 #[derive(Debug, Clone)]
@@ -107,6 +111,27 @@ impl CatalogService {
         selected_path: PathBuf,
     ) -> Result<CatalogSyncResult, ServiceError> {
         sync_catalog_with_fs_for_dir(&self.catalog, request_id, selected_path).await
+    }
+
+    /// Builds [`PreviewData`] for a slice of image DOs by reading metadata and checking the
+    /// preview cache directory. Used by the async task manager for the fast first-phase emit.
+    pub fn build_preview_data(&self, image_dos: &[ImageDO]) -> Vec<PreviewData> {
+        image_dos
+            .iter()
+            .map(|image_do| preview_data_from_image_do(&self.catalog, image_do))
+            .collect()
+    }
+
+    /// Scans the filesystem for `path` and returns which image files are not yet in the catalog
+    /// and which catalog entries no longer exist on disk. CPU-bound; intended to be called from
+    /// a background task.
+    pub fn diff_dir_with_catalog(
+        &self,
+        path: PathBuf,
+        image_dos: Vec<ImageDO>,
+    ) -> (Vec<PathBuf>, Vec<ImageDO>) {
+        let scan = scan_folder_images(path);
+        compare_catalog_to_fs(scan.all_image_paths, image_dos)
     }
 
     /// Imports fotos into managed directory by copying them according to an import strategy and
