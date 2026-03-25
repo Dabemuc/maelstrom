@@ -68,4 +68,5 @@ pub enum Message {
     DevelopSaveRequested,
     DevelopSaveCompleted(Result<(), ServiceError>),
     DevelopExportRequested,
+    Noop,
 }

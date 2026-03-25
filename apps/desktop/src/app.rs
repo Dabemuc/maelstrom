@@ -1,13 +1,14 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 
 use iced::widget::image::Handle;
 use iced::widget::{column, pane_grid};
-use iced::{Element, Length, Task};
+use iced::{Element, Length, Subscription, Task};
 
 use services::CatalogService;
+use services::event_bus::EventBus;
 use services::interface::Services;
 
 use crate::business::workspace::WorkspaceModel;
@@ -21,7 +22,7 @@ use crate::message::Message;
 use crate::state::develop::DevelopState;
 use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{DirectoriesState, ViewMode, WorkspaceState};
-use crate::{theme, update};
+use crate::{subscription, theme, update};
 
 pub struct App {
     pub left_sidebar_mode: LeftSidebarMode,
@@ -41,6 +42,9 @@ pub struct App {
     //
     // new composition stuff
     pub services: Option<Services>,
+    /// EventBus is created before Services so the subscription is always active,
+    /// even while services are still initializing.
+    pub event_bus: Arc<EventBus>,
 }
 
 static APP_START: OnceLock<Instant> = OnceLock::new();
@@ -66,6 +70,9 @@ impl App {
             left_ratio,
             right_ratio,
         );
+
+        let event_bus = EventBus::new();
+        let bus_for_init = event_bus.clone();
 
         let app = Self {
             left_sidebar_mode: LeftSidebarMode::Directories,
@@ -103,6 +110,7 @@ impl App {
             //
             // new composition stuff
             services: None,
+            event_bus,
         };
 
         let services_task = Task::perform(
@@ -114,7 +122,7 @@ impl App {
                 )
                 .await;
 
-                Services::new(catalog.ok().unwrap()) // TODO: handle errors
+                Services::new_with_bus(catalog.ok().unwrap(), bus_for_init) // TODO: handle errors
             },
             Message::ServicesInitialized,
         );
@@ -150,6 +158,10 @@ impl App {
 
     pub fn theme(&self) -> iced::Theme {
         theme::maelstrom_theme()
+    }
+
+    pub fn subscription(&self) -> Subscription<Message> {
+        subscription::service_events(&self.event_bus)
     }
 
     pub fn rebuild_pane_grid(&mut self) {

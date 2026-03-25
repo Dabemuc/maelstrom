@@ -1,7 +1,10 @@
 mod catalog;
 
 pub mod error;
+pub mod event_bus;
+pub mod events;
 pub mod interface;
+pub mod task_manager;
 
 pub use catalog::CatalogService;
 pub use catalog::types;

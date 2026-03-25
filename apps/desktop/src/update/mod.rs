@@ -69,5 +69,6 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             develop::handle_develop_save_completed(app, result)
         }
         Message::DevelopExportRequested => develop::handle_develop_export_requested(app),
+        Message::Noop => Task::none(),
     }
 }

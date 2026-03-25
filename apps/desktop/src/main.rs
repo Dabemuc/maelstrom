@@ -4,6 +4,7 @@ mod components;
 mod message;
 mod render;
 mod state;
+mod subscription;
 mod theme;
 mod update;
 
@@ -21,6 +22,7 @@ fn main() -> iced::Result {
 
     iced::application(App::new, App::update, App::view)
         .theme(App::theme)
+        .subscription(App::subscription)
         .title("Maelstrom")
         .window(window_settings)
         .run()
