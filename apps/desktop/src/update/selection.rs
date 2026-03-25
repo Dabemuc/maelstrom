@@ -7,7 +7,6 @@ use crate::message::Message;
 use crate::state::workspace::Image;
 use crate::state::{Preview, PreviewState};
 use crate::update::helpers::refresh_selected_previews_from_cache;
-use crate::update::preview;
 
 pub fn handle_selection_synced(
     app: &mut App,
@@ -74,10 +73,5 @@ pub fn handle_selection_synced(
         }
     }
 
-    let mut tasks = Vec::new();
-    for result in data.generated {
-        tasks.push(preview::handle_preview_generated(app, result));
-    }
-
-    Task::batch(tasks)
+    Task::none()
 }

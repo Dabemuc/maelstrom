@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use io::catalog::EditGraph;
-use previews::preview_generation::generate_preview_for_image_with_graph;
+use previews::preview_generation::{generate_preview_for_image, generate_preview_for_image_with_graph};
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
@@ -91,6 +91,61 @@ impl TaskManager {
             }
 
             bus.emit(ServiceEvent::ImportCompleted { task_id, payload });
+        });
+
+        self.handles.lock().unwrap().insert(task_id, handle);
+        task_id
+    }
+
+    /// Syncs the catalog with the filesystem for a directory and generates previews for any
+    /// new images in parallel. Emits [`ServiceEvent::SyncCompleted`] immediately after the
+    /// catalog diff (so the UI can populate existing previews), then emits
+    /// [`ServiceEvent::PreviewGenerated`] as each new preview finishes.
+    pub fn spawn_sync_with_previews(
+        self: &Arc<Self>,
+        catalog_service: Arc<CatalogService>,
+        request_id: u64,
+        path: PathBuf,
+    ) -> TaskId {
+        let task_id = TaskId::new(self.next_id.fetch_add(1, Ordering::Relaxed));
+        let bus = self.bus.clone();
+
+        let handle = self.rt.spawn(async move {
+            // 1. Sync catalog with filesystem (fast — no preview gen inside anymore)
+            let result = catalog_service
+                .sync_catalog_with_fs_for_dir(request_id, path)
+                .await;
+
+            let result = match result {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("[TaskManager] Sync failed: {}", e);
+                    return;
+                }
+            };
+
+            // 2. Emit sync result immediately so the UI can show existing previews
+            let images_to_generate = result.images_to_add_to_catalog.clone();
+            bus.emit(ServiceEvent::SyncCompleted { task_id, result });
+
+            // 3. Fan out: one tokio::spawn per new image for true parallelism
+            let preview_handles: Vec<JoinHandle<()>> = images_to_generate
+                .into_iter()
+                .map(|path| {
+                    let bus = bus.clone();
+                    let catalog_clone = catalog_service.get_catalog_ref().clone();
+
+                    tokio::spawn(async move {
+                        let result =
+                            generate_preview_for_image(path, &catalog_clone, false).await;
+                        bus.emit(ServiceEvent::PreviewGenerated { task_id, result });
+                    })
+                })
+                .collect();
+
+            for handle in preview_handles {
+                let _ = handle.await;
+            }
         });
 
         self.handles.lock().unwrap().insert(task_id, handle);

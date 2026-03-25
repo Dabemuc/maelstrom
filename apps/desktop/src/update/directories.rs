@@ -45,12 +45,13 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
         return Task::none();
     };
 
-    let catalog = services.catalog.clone();
+    services.tasks.spawn_sync_with_previews(
+        services.catalog.clone(),
+        request_id,
+        path,
+    );
 
-    Task::perform(
-        async move { catalog.sync_catalog_with_fs_for_dir(request_id, path).await },
-        Message::SelectionSynced,
-    )
+    Task::none()
 }
 
 pub fn handle_open_root_context_menu(app: &mut App, path: PathBuf) -> Task<Message> {

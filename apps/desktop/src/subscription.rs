@@ -44,6 +44,7 @@ fn map_event(event: ServiceEvent) -> Message {
     match event {
         ServiceEvent::PreviewGenerated { result, .. } => Message::PreviewGenerated(result),
         ServiceEvent::ImportCompleted { payload, .. } => Message::ImportCompleted(payload),
+        ServiceEvent::SyncCompleted { result, .. } => Message::SelectionSynced(Ok(result)),
     }
 }
 

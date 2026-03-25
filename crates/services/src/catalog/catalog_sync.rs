@@ -5,8 +5,6 @@ use io::catalog::ImageDO;
 use io::catalog::catalog::Catalog;
 use io::image_files::helpers::scan_folder_images;
 use maelstrom_core::hash::hash_file;
-use previews::preview_generation;
-
 use crate::catalog::preview_data::preview_data_from_image_do;
 use crate::error::ServiceError;
 use crate::types::CatalogSyncResult;
@@ -30,13 +28,6 @@ pub async fn sync_catalog_with_fs_for_dir(
     let (images_to_add_to_catalog, catalog_image_dos_to_delete) =
         compare_catalog_to_fs(selected_scan.all_image_paths, image_dos.clone());
 
-    let mut generated = Vec::new();
-    for path in &images_to_add_to_catalog {
-        generated.push(
-            preview_generation::generate_preview_for_image(path.clone(), catalog, false).await,
-        );
-    }
-
     Ok(CatalogSyncResult {
         request_id,
         selected_path,
@@ -44,7 +35,7 @@ pub async fn sync_catalog_with_fs_for_dir(
         preview_data,
         images_to_add_to_catalog,
         catalog_image_dos_to_delete,
-        generated,
+        generated: vec![],
     })
 }
 

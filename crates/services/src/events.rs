@@ -1,7 +1,7 @@
 use io::catalog::ImageDO;
 use previews::preview_generation::PreviewGenerationError;
 
-use crate::types::ImportCompletedPayload;
+use crate::types::{CatalogSyncResult, ImportCompletedPayload};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TaskId(u64);
@@ -21,5 +21,9 @@ pub enum ServiceEvent {
     ImportCompleted {
         task_id: TaskId,
         payload: ImportCompletedPayload,
+    },
+    SyncCompleted {
+        task_id: TaskId,
+        result: CatalogSyncResult,
     },
 }
