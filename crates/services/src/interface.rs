@@ -12,7 +12,6 @@ use crate::task_manager::TaskManager;
 #[derive(Debug, Clone)]
 pub struct Services {
     pub catalog: Arc<CatalogService>,
-    pub tasks: Arc<TaskManager>,
     pub(crate) bus: Arc<EventBus>,
 }
 
@@ -26,9 +25,9 @@ impl Services {
     /// creates the bus before services are initialized so the subscription is stable.
     pub fn new_with_bus(catalog: CatalogService, bus: Arc<EventBus>) -> Result<Self, ServiceError> {
         let tasks = TaskManager::new(bus.clone());
+        catalog.inject_task_manager(tasks);
         Ok(Self {
             catalog: Arc::new(catalog),
-            tasks,
             bus,
         })
     }

@@ -19,8 +19,7 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
         return Task::none();
     };
 
-    services.tasks.spawn_import_with_previews(
-        services.catalog.clone(),
+    services.catalog.spawn_import_with_previews(
         services::ImportStrategy::DefaultByDate,
         path,
         root,

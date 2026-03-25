@@ -45,8 +45,7 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
         return Task::none();
     };
 
-    services.tasks.spawn_sync_with_previews(
-        services.catalog.clone(),
+    services.catalog.spawn_sync_with_previews(
         request_id,
         path,
     );
