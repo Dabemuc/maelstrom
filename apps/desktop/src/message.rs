@@ -4,7 +4,6 @@ use iced::widget::pane_grid;
 use io::catalog::ImageDO;
 use io::catalog::edit_graph::{EditNodeKind, ParamValue};
 use io::image_files::helpers::FolderScanResult;
-use io::import::ImportItem;
 use maelstrom_image::linear_image::LinearImage;
 use previews::preview_generation::PreviewGenerationError;
 use services::interface::Services;
@@ -16,14 +15,7 @@ use crate::state::develop::DevelopState;
 use crate::state::state_error::StateError;
 use crate::state::workspace::SortingOption;
 use services::error::ServiceError;
-use services::types::CatalogSyncResult;
-
-#[derive(Debug, Clone)]
-pub struct ImportCompletedPayload {
-    pub summary: String,
-    pub imported_items: Vec<ImportItem>,
-    pub root: PathBuf,
-}
+use services::types::{CatalogSyncResult, ImportCompletedPayload};
 
 #[derive(Debug, Clone)]
 pub enum Message {

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use io::catalog::ImageDO;
+use io::import::ImportItem;
 use io::metadata::metadata::Metadata;
 use previews::preview_generation::PreviewGenerationError;
 
@@ -37,4 +38,11 @@ pub struct CatalogSyncResult {
     pub images_to_add_to_catalog: Vec<PathBuf>,
     pub catalog_image_dos_to_delete: Vec<ImageDO>,
     pub generated: Vec<Result<ImageDO, PreviewGenerationError>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ImportCompletedPayload {
+    pub summary: String,
+    pub imported_items: Vec<ImportItem>,
+    pub root: PathBuf,
 }

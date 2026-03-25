@@ -9,3 +9,6 @@ pub use catalog::types;
 /*
 * This crate provides access to all the use cases, types and errors of the backend
 */
+
+// Reexports
+pub use io::import::ImportStrategy;

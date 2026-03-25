@@ -1,14 +1,11 @@
-use std::{collections::HashSet, path::PathBuf};
+use std::path::PathBuf;
 
 use iced::Task;
 use iced::futures::channel::oneshot;
-use io::{
-    image_files::helpers::scan_folder_images,
-    import::{ImportDecision, ImportMethod, create_import_plan, execute_import_plan},
-};
+use io::image_files::helpers::scan_folder_images;
 use previews::preview_generation::generate_preview_for_image_with_graph;
+use services::types::ImportCompletedPayload;
 
-use crate::message::ImportCompletedPayload;
 use crate::update::workspace::handle_error_message;
 use crate::{app::App, message::Message};
 
@@ -21,62 +18,14 @@ pub fn handle_import_fotos_into_managed_root(app: &mut App, root: PathBuf) -> Ta
     if let Some(path) = rfd::FileDialog::new().pick_folder() {
         Task::perform(
             async move {
-                // Read all images to import
-                let scan_result = scan_folder_images(path.clone());
-                println!(
-                    "Importing {} images into {:?}",
-                    scan_result.all_image_paths.len(),
-                    root.to_str()
-                );
-
-                let already_imported_images = match services
+                services
                     .catalog
-                    .get_all_image_dos_for_path(root.clone())
+                    .import_fotos_into_managed_dir_with_strategy(
+                        services::ImportStrategy::DefaultByDate,
+                        path,
+                        root,
+                    )
                     .await
-                {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return ImportCompletedPayload {
-                            summary: format!(
-                                "Failed to load already imported images for path: {}",
-                                err
-                            ),
-                            imported_items: Vec::new(),
-                            root: root.clone(),
-                        };
-                    }
-                };
-                let existing_hashes: HashSet<String> = already_imported_images
-                    .into_iter()
-                    .map(|img| img.hash)
-                    .collect();
-                let plan = create_import_plan(
-                    root.clone(),
-                    &scan_result,
-                    &existing_hashes,
-                    ImportMethod::DefaultByDate,
-                );
-                let imported_items = plan
-                    .items
-                    .iter()
-                    .filter(|item| item.decision == ImportDecision::Import)
-                    .cloned()
-                    .collect();
-                let report = execute_import_plan(plan, services.catalog.get_catalog_ref()).await;
-
-                let summary = format!(
-                    "Imported {} new images out of {} total. Skipped {}, errors {}.",
-                    report.imported_count,
-                    scan_result.all_image_paths.len(),
-                    report.skipped_count,
-                    report.errors.len()
-                );
-
-                ImportCompletedPayload {
-                    summary,
-                    imported_items,
-                    root: root.clone(),
-                }
             },
             Message::ImportCompleted,
         )
