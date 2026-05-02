@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use iced::widget::image::Handle;
@@ -109,7 +109,7 @@ pub fn build_preview_from_image_do(preview_cache_dir: PathBuf, image_do: &ImageD
 /// Builds a minimal [`Preview`] from a catalog `ImageDO` without reading EXIF metadata or
 /// image dimensions. Only checks whether the preview file exists on disk.
 /// Used for the fast first-paint when selecting a directory.
-pub fn build_quick_preview_from_image_do(preview_cache_dir: &PathBuf, image_do: &ImageDO) -> Preview {
+pub fn build_quick_preview_from_image_do(preview_cache_dir: &Path, image_do: &ImageDO) -> Preview {
     let preview_path = preview_cache_dir.join(format!(
         "{}.{}",
         image_do.hash,

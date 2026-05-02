@@ -8,7 +8,7 @@ Catalog
 - [x] Get managed images for directory
 - [x] Get Edit Graph for managed image
 - [x] Update Edit Graph for image
-- [ ] Import new fotos from folder into managed directory with import_strategy
+- [x] Import new fotos from folder into managed directory with import_strategy
 
 Previews
 
