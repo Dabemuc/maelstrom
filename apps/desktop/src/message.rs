@@ -1,43 +1,32 @@
 use std::path::PathBuf;
 
 use iced::widget::pane_grid;
-use io::catalog::catalog::Catalog;
-use io::catalog::catalog_error::CatalogError;
-use io::catalog::edit_graph::{EditNodeKind, ParamValue};
 use io::catalog::ImageDO;
+use io::catalog::edit_graph::{EditNodeKind, ParamValue};
 use io::image_files::helpers::FolderScanResult;
-use io::import::ImportItem;
 use maelstrom_image::linear_image::LinearImage;
 use previews::preview_generation::PreviewGenerationError;
+use services::interface::Services;
 
 use crate::components::sidebar_left::LeftSidebarMode;
 use crate::components::sidebar_right::RightSidebarMode;
+use crate::state::ViewMode;
 use crate::state::develop::DevelopState;
 use crate::state::state_error::StateError;
 use crate::state::workspace::SortingOption;
-use crate::state::ViewMode;
-use crate::state::{Preview, SelectionDiffData};
-
-#[derive(Debug, Clone)]
-pub struct ImportCompletedPayload {
-    pub summary: String,
-    pub imported_items: Vec<ImportItem>,
-    pub root: PathBuf,
-}
+use services::error::ServiceError;
+use services::types::{CatalogSyncResult, ImportCompletedPayload};
 
 #[derive(Debug, Clone)]
 pub enum Message {
     LeftSidebarClicked(LeftSidebarMode),
     RightSidebarClicked(RightSidebarMode),
     PaneResized(pane_grid::ResizeEvent),
-    CreateCatalog,
-    SelectCatalog,
-    CatalogLoadAttempted(Result<Catalog, CatalogError>),
-    CatalogLoaded,
+    ServicesInitialized(Result<Services, ServiceError>),
     DirectoriesCollapseAll,
     AddManagedDirectory,
     LoadManagedDirectories,
-    ManagedDirectoriesLoadAttempted(Result<Vec<PathBuf>, CatalogError>),
+    ManagedDirectoriesLoadAttempted(Result<Vec<PathBuf>, ServiceError>),
     Notification(String),
     ToggleDirectory(PathBuf),
     SelectDirectory(PathBuf),
@@ -46,9 +35,7 @@ pub enum Message {
     RefreshManagedRoot(PathBuf),
     ImportFotos(PathBuf),
     WorkspaceRootScanned((PathBuf, FolderScanResult)),
-    SelectionCatalogLoaded(Result<(u64, PathBuf, Vec<ImageDO>), CatalogError>),
-    SelectionDiffComputed(SelectionDiffData),
-    PreviewDataLoadedForImage(Preview),
+    SelectionSynced(Result<CatalogSyncResult, ServiceError>),
     PreviewGenerated(Result<ImageDO, PreviewGenerationError>),
     ImportCompleted(ImportCompletedPayload),
     SortingOptionSelected(SortingOption),
@@ -79,6 +66,7 @@ pub enum Message {
         value: String,
     },
     DevelopSaveRequested,
-    DevelopSaveCompleted(Result<(), CatalogError>),
+    DevelopSaveCompleted(Result<(), ServiceError>),
     DevelopExportRequested,
+    Noop,
 }

@@ -57,8 +57,8 @@ pub fn sidebar_left(state: &App) -> Element<'_, Message> {
 }
 
 fn directories_view(state: &App) -> Element<'_, Message> {
-    if state.catalog.is_none() {
-        return text("No Catalog").into();
+    if state.services.is_none() {
+        return text("Services not initialized").into();
     }
 
     let roots: Vec<PathBuf> = if !state.managed_dirs.is_empty() {
@@ -417,7 +417,7 @@ fn folder_row_style(
 }
 
 fn collections_view(state: &App) -> Element<'_, Message> {
-    if state.catalog.is_some() {
+    if state.services.is_some() {
         text("Catalog collections placeholder").into()
     } else {
         text("No Catalog").into()

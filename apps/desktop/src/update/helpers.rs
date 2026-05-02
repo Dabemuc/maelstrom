@@ -1,11 +1,10 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use iced::widget::image::Handle;
 use image::image_dimensions;
 use io::catalog::ImageDO;
-use io::catalog::catalog::Catalog;
 use io::image_files::helpers::FolderScanResult;
 use io::metadata::metadata::Metadata;
 use previews::preview_generation::PREVIEW_FILE_TYPE;
@@ -56,8 +55,8 @@ pub fn to_workspace_scan_result(scan_result: &FolderScanResult) -> WorkspaceScan
 
 /// Builds a `Preview` from a catalog `ImageDO`, resolving the cached preview
 /// file path and determining whether the original is present.
-pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Preview {
-    let path = catalog.preview_cache_dir().join(format!(
+pub fn build_preview_from_image_do(preview_cache_dir: PathBuf, image_do: &ImageDO) -> Preview {
+    let path = preview_cache_dir.join(format!(
         "{}.{}",
         image_do.hash,
         PREVIEW_FILE_TYPE.get_file_extension()
@@ -100,6 +99,40 @@ pub fn build_preview_from_image_do(catalog: &Catalog, image_do: &ImageDO) -> Pre
             None
         },
         preview_state: if path.exists() {
+            PreviewState::Ok
+        } else {
+            PreviewState::OriginalMissing
+        },
+    }
+}
+
+/// Builds a minimal [`Preview`] from a catalog `ImageDO` without reading EXIF metadata or
+/// image dimensions. Only checks whether the preview file exists on disk.
+/// Used for the fast first-paint when selecting a directory.
+pub fn build_quick_preview_from_image_do(preview_cache_dir: &Path, image_do: &ImageDO) -> Preview {
+    let preview_path = preview_cache_dir.join(format!(
+        "{}.{}",
+        image_do.hash,
+        PREVIEW_FILE_TYPE.get_file_extension()
+    ));
+    let preview_exists = preview_path.exists();
+
+    Preview {
+        original_image: Image {
+            path: PathBuf::from(&image_do.path),
+            hash: image_do.hash.clone(),
+            meta: None,
+            width: None,
+            height: None,
+            file_size: None,
+            created_at: None,
+        },
+        img_handle: if preview_exists {
+            Some(Handle::from_path(preview_path))
+        } else {
+            None
+        },
+        preview_state: if preview_exists {
             PreviewState::Ok
         } else {
             PreviewState::OriginalMissing

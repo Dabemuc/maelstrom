@@ -2,22 +2,21 @@ use std::path::PathBuf;
 
 use iced::Task;
 use iced::futures::channel::oneshot;
-use io::catalog::catalog_error::CatalogError;
 use io::image_files::helpers::scan_folder_images;
+use services::error::ServiceError;
 
 use crate::app::App;
 use crate::message::Message;
 
 pub fn handle_add_managed_directory(app: &mut App) -> Task<Message> {
-    let Some(catalog) = app.catalog.clone() else {
-        println!("Cannot add managed directory: no catalog loaded");
+    let Some(services) = app.services.clone() else {
+        println!("Cannot add managed directory: services not loaded");
         return Task::none();
     };
 
     if let Some(path) = rfd::FileDialog::new().pick_folder() {
-        let catalog_clone = catalog.clone();
         Task::perform(
-            async move { catalog_clone.add_managed_directory(path.clone()).await },
+            async move { services.catalog.add_managed_directory(path.clone()).await },
             |res| match res {
                 Ok(_) => Message::LoadManagedDirectories,
                 Err(_e) => Message::Notification("Failed to add managed directory".into()),
@@ -31,8 +30,8 @@ pub fn handle_add_managed_directory(app: &mut App) -> Task<Message> {
 
 pub fn handle_load_managed_directories(app: &mut App) -> Task<Message> {
     crate::app::startup_log("LoadManagedDirectories started");
-    if let Some(catalog) = &app.catalog {
-        let catalog_clone = catalog.clone();
+    if let Some(services) = &app.services {
+        let catalog_clone = services.catalog.clone();
         Task::perform(
             async move { catalog_clone.get_managed_directories().await },
             Message::ManagedDirectoriesLoadAttempted,
@@ -45,7 +44,7 @@ pub fn handle_load_managed_directories(app: &mut App) -> Task<Message> {
 
 pub fn handle_managed_directories_load_attempted(
     app: &mut App,
-    result: Result<Vec<PathBuf>, CatalogError>,
+    result: Result<Vec<PathBuf>, ServiceError>,
 ) -> Task<Message> {
     match result {
         Ok(paths) => {

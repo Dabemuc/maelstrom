@@ -13,7 +13,7 @@ use crate::image_files::helpers::FolderScanResult;
 use crate::metadata::metadata::Metadata;
 
 #[derive(Debug, Clone, Copy)]
-pub enum ImportMethod {
+pub enum ImportStrategy {
     DefaultByDate,
 }
 
@@ -70,7 +70,7 @@ pub fn create_import_plan(
     root: impl AsRef<Path>,
     scan_result: &FolderScanResult,
     existing_hashes: &HashSet<String>,
-    method: ImportMethod,
+    strategy: ImportStrategy,
 ) -> ImportPlan {
     let root = root.as_ref().to_path_buf();
     let mut items = Vec::with_capacity(scan_result.all_image_paths.len());
@@ -114,8 +114,8 @@ pub fn create_import_plan(
         });
     }
 
-    match method {
-        ImportMethod::DefaultByDate => {
+    match strategy {
+        ImportStrategy::DefaultByDate => {
             items.sort_by(|left, right| match (&left.sort_key, &right.sort_key) {
                 (Some(left_key), Some(right_key)) => left_key.cmp(right_key),
                 (Some(_), None) => Ordering::Less,

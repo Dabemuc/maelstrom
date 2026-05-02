@@ -26,6 +26,9 @@ pub enum CatalogError {
 
     #[error("Filesystem error concerning catalog: {0:?}")]
     FileSystem(String),
+
+    #[error("Default user config directory at {0:?} doesnt exist")]
+    MissingCatalogBaseDirectory(String),
 }
 
 // Convert boxed dynamic errors

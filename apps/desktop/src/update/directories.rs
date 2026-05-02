@@ -41,18 +41,16 @@ pub fn handle_select_directory(app: &mut App, path: PathBuf) -> Task<Message> {
     app.active_selection_request_id = Some(request_id);
     crate::update::helpers::refresh_selected_previews_from_cache(app);
 
-    let Some(catalog) = app.catalog.clone() else {
+    let Some(services) = app.services.as_ref() else {
         return Task::none();
     };
 
-    Task::perform(
-        async move {
-            let selected_path = path.clone();
-            let image_dos = catalog.get_all_image_dos_for_path(&selected_path).await?;
-            Ok((request_id, selected_path, image_dos))
-        },
-        Message::SelectionCatalogLoaded,
-    )
+    services.catalog.spawn_sync_with_previews(
+        request_id,
+        path,
+    );
+
+    Task::none()
 }
 
 pub fn handle_open_root_context_menu(app: &mut App, path: PathBuf) -> Task<Message> {

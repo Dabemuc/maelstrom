@@ -64,7 +64,7 @@ fn footer_controls(state: &App) -> Element<'_, Message> {
         return Space::new().height(Length::Fixed(0.0)).into();
     }
 
-    let can_save = state.catalog.is_some()
+    let can_save = state.services.is_some()
         && state.develop_state.is_some()
         && state.workspace_state.selected_preview_hash.is_some();
 

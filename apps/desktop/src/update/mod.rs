@@ -1,4 +1,3 @@
-pub mod catalog;
 pub mod develop;
 pub mod directories;
 pub mod helpers;
@@ -7,6 +6,7 @@ pub mod managed;
 pub mod pane_grid;
 pub mod preview;
 pub mod selection;
+pub mod services;
 pub mod sidebar;
 pub mod workspace;
 
@@ -20,12 +20,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::LeftSidebarClicked(mode) => sidebar::handle_left_sidebar_clicked(app, mode),
         Message::RightSidebarClicked(mode) => sidebar::handle_right_sidebar_clicked(app, mode),
         Message::PaneResized(event) => pane_grid::handle_pane_resized(app, event),
-        Message::CreateCatalog => catalog::handle_create_catalog(app),
-        Message::SelectCatalog => catalog::handle_select_catalog(app),
-        Message::CatalogLoadAttempted(result) => {
-            catalog::handle_catalog_load_attempted(app, result)
-        }
-        Message::CatalogLoaded => catalog::handle_catalog_loaded(app),
+        Message::ServicesInitialized(result) => services::handle_services_initialized(app, result),
         Message::DirectoriesCollapseAll => directories::handle_directories_collapse_all(app),
         Message::AddManagedDirectory => managed::handle_add_managed_directory(app),
         Message::LoadManagedDirectories => managed::handle_load_managed_directories(app),
@@ -42,15 +37,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::WorkspaceRootScanned((root, scan_result)) => {
             workspace::handle_workspace_root_scanned(app, root, scan_result)
         }
-        Message::SelectionCatalogLoaded(result) => {
-            selection::handle_selection_catalog_loaded(app, result)
-        }
-        Message::SelectionDiffComputed(diff_data) => {
-            selection::handle_selection_diff_computed(app, diff_data)
-        }
-        Message::PreviewDataLoadedForImage(preview) => {
-            preview::handle_preview_data_loaded_for_image(app, preview)
-        }
+        Message::SelectionSynced(result) => selection::handle_selection_synced(app, result),
         Message::PreviewGenerated(result) => preview::handle_preview_generated(app, result),
         Message::ImportCompleted(payload) => import::handle_import_completed(app, payload),
         Message::SortingOptionSelected(option) => {
@@ -82,5 +69,6 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             develop::handle_develop_save_completed(app, result)
         }
         Message::DevelopExportRequested => develop::handle_develop_export_requested(app),
+        Message::Noop => Task::none(),
     }
 }

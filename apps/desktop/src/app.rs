@@ -1,13 +1,15 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 
 use iced::widget::image::Handle;
 use iced::widget::{column, pane_grid};
-use iced::{Element, Length, Task};
+use iced::{Element, Length, Subscription, Task};
 
-use io::catalog::catalog::{CATALOG_FILE_NAME, CATALOG_FOLDER_NAME, Catalog};
+use services::CatalogService;
+use services::event_bus::EventBus;
+use services::interface::Services;
 
 use crate::business::workspace::WorkspaceModel;
 use crate::components::center_stage::center_stage;
@@ -20,13 +22,12 @@ use crate::message::Message;
 use crate::state::develop::DevelopState;
 use crate::state::workspace::{SortingDirection, SortingOption};
 use crate::state::{DirectoriesState, ViewMode, WorkspaceState};
-use crate::{theme, update};
+use crate::{subscription, theme, update};
 
 pub struct App {
     pub left_sidebar_mode: LeftSidebarMode,
     pub right_sidebar_mode: RightSidebarMode,
     pub view_mode: ViewMode,
-    pub catalog: Option<Catalog>,
     pub managed_dirs: Vec<PathBuf>,
     pub directories_state: DirectoriesState,
     pub workspace_state: WorkspaceState,
@@ -38,6 +39,12 @@ pub struct App {
     pub(crate) right_split: Option<pane_grid::Split>,
     pub(crate) left_ratio: f32,
     pub(crate) right_ratio: f32,
+    //
+    // new composition stuff
+    pub services: Option<Services>,
+    /// EventBus is created before Services so the subscription is always active,
+    /// even while services are still initializing.
+    pub event_bus: Arc<EventBus>,
 }
 
 static APP_START: OnceLock<Instant> = OnceLock::new();
@@ -64,11 +71,13 @@ impl App {
             right_ratio,
         );
 
+        let event_bus = EventBus::new();
+        let bus_for_init = event_bus.clone();
+
         let app = Self {
             left_sidebar_mode: LeftSidebarMode::Directories,
             right_sidebar_mode: RightSidebarMode::Hidden,
             view_mode: ViewMode::NoCatalog,
-            catalog: None,
             managed_dirs: Vec::new(),
             directories_state: DirectoriesState {
                 expanded: HashSet::new(),
@@ -97,37 +106,29 @@ impl App {
             right_split: layout.right_split,
             left_ratio,
             right_ratio,
+
+            //
+            // new composition stuff
+            services: None,
+            event_bus,
         };
 
-        let config_base = dirs::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("maelstrom");
+        let services_task = Task::perform(
+            async {
+                let catalog = CatalogService::init(
+                    dirs::config_dir()
+                        .unwrap_or_else(|| PathBuf::from("."))
+                        .join("maelstrom"),
+                )
+                .await;
 
-        if !config_base.exists() {
-            println!("User config dir doesnt exists at {:?}", config_base);
-            startup_log("Config base missing; startup idle");
-            return (app, Task::none());
-        }
-
-        let catalog_root = config_base.join(CATALOG_FOLDER_NAME);
-
-        let startup_task = if catalog_root.join(CATALOG_FILE_NAME).exists() {
-            startup_log("Catalog file exists; loading catalog");
-            Task::perform(
-                Catalog::load(catalog_root.clone()),
-                Message::CatalogLoadAttempted,
-            )
-        } else {
-            println!("default catalog not found, creating at: {:?}", catalog_root);
-            startup_log("Catalog missing; creating default catalog");
-            Task::perform(
-                Catalog::create(config_base.clone()),
-                Message::CatalogLoadAttempted,
-            )
-        };
+                Services::new_with_bus(catalog.ok().unwrap(), bus_for_init) // TODO: handle errors
+            },
+            Message::ServicesInitialized,
+        );
 
         startup_log("App::new finished, startup task dispatched");
-        (app, startup_task)
+        (app, services_task)
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -157,6 +158,10 @@ impl App {
 
     pub fn theme(&self) -> iced::Theme {
         theme::maelstrom_theme()
+    }
+
+    pub fn subscription(&self) -> Subscription<Message> {
+        subscription::service_events(&self.event_bus)
     }
 
     pub fn rebuild_pane_grid(&mut self) {
